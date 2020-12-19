@@ -288,7 +288,7 @@ public class FABRIK : MonoBehaviour
     }
 
     // After constrained positions are decided, I phisically rotate the joints to express the way in which kinematich chain with all its parts looks like 
-    // It seens like the first straight forward aproach will now be ok enough for that task, as it is simple, fast and easy on resources :)
+    // It seems like the first straight forward aproach will now be ok enough for that task, as it is simple, fast and easy on resources :)
     private void RotateJoints(List<Vector3> joints)
     {
         //Quaternion angles;
