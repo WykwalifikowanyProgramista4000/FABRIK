@@ -17,8 +17,6 @@ public class GradientDescent : MonoBehaviour
 
     private void Start()
     {
-
-
         angles = new float[Joints.Count];
 
         for (int i = 0; i < Joints.Count; i++)
@@ -40,7 +38,7 @@ public class GradientDescent : MonoBehaviour
 
     private void Update()
     {
-        InverseKinematics(Target.GetComponent<Transform>().position, angles);
+        InverseKinematics(Target.GetComponent<Transform>().position);
     }
 
     public Vector3 ForwardKinematics (float[] angles)
@@ -54,26 +52,31 @@ public class GradientDescent : MonoBehaviour
             Vector3 nextPoint = prevPoint + rotation * Joints[jointNo].GetComponent<RobotJoint>().StartOffset;
 
             prevPoint = nextPoint;
+            Debug.Log(prevPoint);
         }
 
-        Debug.Log(prevPoint);
+        //Debug.Log(prevPoint);
         return prevPoint;
     }
 
-    public float DistanceFromTarget (Vector3 target, float[] angles)
+    public float DistanceFromTarget (Vector3 target)
     {
         Vector3 point = ForwardKinematics(angles);
-        return Vector3.Distance(point, target);
+
+        float distance = Vector3.Distance(point, target);
+
+        Debug.Log(distance);
+        return distance;
     }
 
-    public float PartialGradient (Vector3 target, float[] angles, int angleNo)
+    public float PartialGradient (Vector3 target, int angleNo)
     {
         float angle = angles[angleNo];
 
-        float f_x = DistanceFromTarget(target, angles);
+        float f_x = DistanceFromTarget(target);
 
         angles[angleNo] += SamplingDistance;
-        float f_x_plus_d = DistanceFromTarget(target, angles);
+        float f_x_plus_d = DistanceFromTarget(target);
 
         float gradnient = (f_x_plus_d - f_x) / SamplingDistance;
 
@@ -82,14 +85,16 @@ public class GradientDescent : MonoBehaviour
         return gradnient;
     }
 
-    public void InverseKinematics (Vector3 target, float[] angles)
+    public void InverseKinematics (Vector3 target)
     {
         for (int angleNo = 0; angleNo < Joints.Count; angleNo++)
         {
-            float gradient = PartialGradient(target, angles, angleNo);
+            float gradient = PartialGradient(target, angleNo);
             angles[angleNo] -= LearningRate * gradient;
 
-            angles[angleNo] = Mathf.Clamp(angles[angleNo], Joints[angleNo].GetComponent<RobotJoint>().minAngle, Joints[angleNo].GetComponent<RobotJoint>().maxAngle);
+            //angles[angleNo] = Mathf.Clamp(angles[angleNo], Joints[angleNo].GetComponent<RobotJoint>().minAngle, Joints[angleNo].GetComponent<RobotJoint>().maxAngle);
+
+            Debug.Log("angle " + angleNo + " : " + angles[angleNo]);
 
             //for (int i = 0; i < Joints.Count; i++)
             //{
@@ -111,6 +116,11 @@ public class GradientDescent : MonoBehaviour
             {
                 Joints[i].GetComponent<Transform>().localRotation = Quaternion.AngleAxis(angles[i], Joints[i].GetComponent<RobotJoint>().Axis);
             }
+
+            //Updating LearningRate and SamplingDistance
+            float head2TargetDistance = Vector3.Distance(Joints[Joints.Count - 1].transform.position, target);
+            SamplingDistance = head2TargetDistance / 2;
+            LearningRate = head2TargetDistance * 7;
 
             //if (DistanceFromTarget(target, angles) < DistanceThreshold)
             //    return;
