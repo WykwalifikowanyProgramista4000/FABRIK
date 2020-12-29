@@ -2603,12 +2603,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Axis: {x: 1, y: 0, z: 0}
-  minAngleX: 0
-  maxAngleX: 0
+  minAngleX: 30
+  maxAngleX: 30
   minAngleY: 0
   maxAngleY: 0
-  minAngleZ: 0
-  maxAngleZ: 0
+  minAngleZ: 30
+  maxAngleZ: 30
   StartOffset: {x: 0, y: 0, z: 0}
   minAngle: 0
   maxAngle: 0
@@ -3415,7 +3415,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 1107867951}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ab1a3d4d26bc208418673290eaaad914, type: 3}
+  m_Script: {fileID: 11500000, guid: 0bb7d2814cb75a5419fd328684824359, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   m_TargetPoint: {fileID: 1796471985}
@@ -3429,7 +3429,7 @@ MonoBehaviour:
   m_MaxFABRIKIterations: 20
   m_DistanceFromTargetTolerance: 0.01
   debug_TestPoint: {fileID: 253869511}
-  debug_RayDuration: 0.4
+  debug_RayDuration: 0.1
 --- !u!1 &1118445661
 GameObject:
   m_ObjectHideFlags: 0
@@ -3723,12 +3723,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Axis: {x: 0, y: 0, z: 0}
-  minAngleX: 0
-  maxAngleX: 0
+  minAngleX: 30
+  maxAngleX: 30
   minAngleY: 0
   maxAngleY: 0
-  minAngleZ: 0
-  maxAngleZ: 0
+  minAngleZ: 30
+  maxAngleZ: 30
   StartOffset: {x: 0, y: 0, z: 0}
   minAngle: 0
   maxAngle: 0
@@ -4505,12 +4505,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Axis: {x: 0, y: 0, z: 0}
-  minAngleX: 0
-  maxAngleX: 0
+  minAngleX: 30
+  maxAngleX: 30
   minAngleY: 0
   maxAngleY: 0
-  minAngleZ: 0
-  maxAngleZ: 0
+  minAngleZ: 30
+  maxAngleZ: 30
   StartOffset: {x: 0, y: 0, z: 0}
   minAngle: 0
   maxAngle: 0
@@ -5682,12 +5682,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Axis: {x: 1, y: 0, z: 0}
-  minAngleX: 0
-  maxAngleX: 0
+  minAngleX: 30
+  maxAngleX: 30
   minAngleY: 0
   maxAngleY: 0
-  minAngleZ: 0
-  maxAngleZ: 0
+  minAngleZ: 30
+  maxAngleZ: 30
   StartOffset: {x: 0, y: 0, z: 0}
   minAngle: 0
   maxAngle: 0
@@ -6013,12 +6013,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Axis: {x: 0, y: 0, z: 0}
-  minAngleX: 0
-  maxAngleX: 0
+  minAngleX: 30
+  maxAngleX: 30
   minAngleY: 0
   maxAngleY: 0
-  minAngleZ: 0
-  maxAngleZ: 0
+  minAngleZ: 30
+  maxAngleZ: 30
   StartOffset: {x: 0, y: 0, z: 0}
   minAngle: 0
   maxAngle: 0
