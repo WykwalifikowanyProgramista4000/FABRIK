@@ -297,34 +297,34 @@ public class FABRIK : MonoBehaviour
             m_Joints[i].GetComponent<Transform>().rotation = Quaternion.LookRotation((joints[i + 1] - m_Joints[i].GetComponent<Transform>().position).normalized) * Quaternion.AngleAxis(90, new Vector3(1, 0, 0));
         }
 
-        #region DEBUG: off
-        ////  0 -> 1
-        //Vector3 direction = (joints[1] - joints[0]).normalized;
+        #region DEBUG: on
+        //  0 -> 1
+        Vector3 direction = (joints[1] - joints[0]).normalized;
 
-        //Ray ray = new Ray(joints[0], direction);    // Linia wzdłóż lokalnej osi Y
-        //Debug.DrawRay(joints[0], direction.normalized * 100, Color.red, 0.1f, false);
-        //Debug.DrawRay(joints[0], direction.normalized * -100, Color.red, 0.1f, false);
+        Ray ray = new Ray(joints[0], direction);    // Linia wzdłóż lokalnej osi Y
+        Debug.DrawRay(joints[0], direction.normalized * 100, Color.red, 0.1f, false);
+        Debug.DrawRay(joints[0], direction.normalized * -100, Color.red, 0.1f, false);
 
-        ////get vector from point on line to point in space
-        //Vector3 linePointToPoint = m_debug_TestPoint.GetComponent<Transform>().position - joints[0];
-        //float t = Vector3.Dot(linePointToPoint, direction);
-        //Vector3 O = joints[0] + direction * t;
+        //get vector from point on line to point in space
+        Vector3 linePointToPoint = debug_TestPoint.GetComponent<Transform>().position - joints[0];
+        float t = Vector3.Dot(linePointToPoint, direction);
+        Vector3 O = joints[0] + direction * t;
 
-        //Debug.DrawRay(O, (m_debug_TestPoint.GetComponent<Transform>().position - O).normalized * 100, Color.magenta, 0.1f, false);
+        Debug.DrawRay(O, (debug_TestPoint.GetComponent<Transform>().position - O).normalized * 100, Color.magenta, 0.1f, false);
 
-        ////  1 -> 2
-        //direction = (joints[2] - joints[1]).normalized;
+        //  1 -> 2
+        direction = (joints[2] - joints[1]).normalized;
 
-        //ray = new Ray(joints[1], direction);    // Linia wzdłóż lokalnej osi Y
-        //Debug.DrawRay(joints[1], direction.normalized * 100, Color.red, 0.1f, false);
-        //Debug.DrawRay(joints[1], direction.normalized * -100, Color.red, 0.1f, false);
+        ray = new Ray(joints[1], direction);    // Linia wzdłóż lokalnej osi Y
+        Debug.DrawRay(joints[1], direction.normalized * 100, Color.red, 0.1f, false);
+        Debug.DrawRay(joints[1], direction.normalized * -100, Color.red, 0.1f, false);
 
-        ////get vector from point on line to point in space
-        //linePointToPoint = m_debug_TestPoint.GetComponent<Transform>().position - joints[1];
-        //t = Vector3.Dot(linePointToPoint, direction);
-        //O = joints[1] + direction * t;
+        //get vector from point on line to point in space
+        linePointToPoint = debug_TestPoint.GetComponent<Transform>().position - joints[1];
+        t = Vector3.Dot(linePointToPoint, direction);
+        O = joints[1] + direction * t;
 
-        //Debug.DrawRay(O, (m_debug_TestPoint.GetComponent<Transform>().position - O).normalized * 100, Color.cyan, 0.1f, false);
+        Debug.DrawRay(O, (debug_TestPoint.GetComponent<Transform>().position - O).normalized * 100, Color.cyan, 0.1f, false);
         #endregion
     }
 
