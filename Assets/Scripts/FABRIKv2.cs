@@ -278,25 +278,35 @@ public class FABRIKv2 : MonoBehaviour
 
             Quaternion superCoolRotation = Quaternion.FromToRotation(XD.normalized, O.normalized);
 
-            plusXplusZ = superCoolRotation * new Vector3(XD.x + (XD.y * Mathf.Tan(m_Joints[i].GetComponent<RobotJoint>().maxAngleX * Mathf.Deg2Rad)),
+            plusXplusZ = superCoolRotation * Quaternion.AngleAxis(m_Base.GetComponent<Transform>().rotation.eulerAngles.y, Vector3.up) *
+                                             new Vector3(XD.x + (XD.y * Mathf.Tan(m_Joints[i].GetComponent<RobotJoint>().maxAngleX * Mathf.Deg2Rad)),
                                              XD.y,
                                              XD.z + (XD.y * Mathf.Tan(m_Joints[i].GetComponent<RobotJoint>().maxAngleZ * Mathf.Deg2Rad)));
 
 
-            plusXminusZ = superCoolRotation * new Vector3(XD.x + (XD.y * Mathf.Tan(m_Joints[i].GetComponent<RobotJoint>().maxAngleX * Mathf.Deg2Rad)),
+            plusXminusZ = superCoolRotation * Quaternion.AngleAxis(m_Base.GetComponent<Transform>().rotation.eulerAngles.y, Vector3.up) *
+                                              new Vector3(XD.x + (XD.y * Mathf.Tan(m_Joints[i].GetComponent<RobotJoint>().maxAngleX * Mathf.Deg2Rad)),
                                               XD.y,
                                               XD.z - (XD.y * Mathf.Tan(m_Joints[i].GetComponent<RobotJoint>().minAngleZ * Mathf.Deg2Rad)));
 
 
-            minusXplusZ = superCoolRotation * new Vector3(XD.x - (XD.y * Mathf.Tan(m_Joints[i].GetComponent<RobotJoint>().minAngleX * Mathf.Deg2Rad)),
+            minusXplusZ = superCoolRotation * Quaternion.AngleAxis(m_Base.GetComponent<Transform>().rotation.eulerAngles.y, Vector3.up) *
+                                              new Vector3(XD.x - (XD.y * Mathf.Tan(m_Joints[i].GetComponent<RobotJoint>().minAngleX * Mathf.Deg2Rad)),
                                               XD.y,
                                               XD.z + (XD.y * Mathf.Tan(m_Joints[i].GetComponent<RobotJoint>().maxAngleZ * Mathf.Deg2Rad)));
 
 
-            minusXminusZ = superCoolRotation * new Vector3(XD.x - (XD.y * Mathf.Tan(m_Joints[i].GetComponent<RobotJoint>().minAngleX * Mathf.Deg2Rad)),
+            minusXminusZ = superCoolRotation * Quaternion.AngleAxis(m_Base.GetComponent<Transform>().rotation.eulerAngles.y, Vector3.up) *
+                                               new Vector3(XD.x - (XD.y * Mathf.Tan(m_Joints[i].GetComponent<RobotJoint>().minAngleX * Mathf.Deg2Rad)),
                                                XD.y,
                                                XD.z - (XD.y * Mathf.Tan(m_Joints[i].GetComponent<RobotJoint>().minAngleZ * Mathf.Deg2Rad)));
 
+            //plusXplusZ = Quaternion.AngleAxis(m_Base.GetComponent<Transform>().rotation.eulerAngles.y, Vector3.up) * plusXplusZ;
+            //plusXminusZ = Quaternion.AngleAxis(m_Base.GetComponent<Transform>().rotation.eulerAngles.y, Vector3.up) * plusXminusZ;
+            //minusXplusZ = Quaternion.AngleAxis(m_Base.GetComponent<Transform>().rotation.eulerAngles.y, Vector3.up) * minusXplusZ;
+            //minusXminusZ = Quaternion.AngleAxis(m_Base.GetComponent<Transform>().rotation.eulerAngles.y, Vector3.up) * minusXminusZ;
+
+            //XD = Quaternion.FromToRotation(m_Base.GetComponent<Transform>().position.normalized, new Vector3(1, 1, 1)) * XD;
             XD = superCoolRotation * XD;
             DrawStarAtPoint(XD + joints[i], Color.red);
 
