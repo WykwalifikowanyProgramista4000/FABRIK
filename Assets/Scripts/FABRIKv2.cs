@@ -226,6 +226,8 @@ public class FABRIKv2 : MonoBehaviour
         Vector3 minusXplusZ;
         Vector3 minusXminusZ;
 
+        bool isOBelowJoint = false;
+
         // place joint[0] on the origin with its Z axis pointing along the direction vector cast from the base to joint[0]
         joints[0] = origin;
 
@@ -257,11 +259,8 @@ public class FABRIKv2 : MonoBehaviour
             #endregion
 
             #region 2. Cast a line L from i joint that goes through i and i-1 joint and find the point O on the newly created line at the intersection with the perpendicular line cast to L
-            //O = m_Joints[i + 1].GetComponent<Transform>().position;
-            
             linePointToPoint = (joints[i + 1] - joints[i]); //get vector from point on line to point in space
             t = Vector3.Dot(linePointToPoint, direction);
-            Vector3 oPosition = new Vector3() + joints[i] + direction * t;
             O = joints[i] + direction * t;
             Debug.DrawRay(O, (joints[i + 1] - O).normalized * 100, Color.magenta, debug_RayDuration, false);
             #endregion
@@ -274,46 +273,64 @@ public class FABRIKv2 : MonoBehaviour
                                      O.magnitude,
                                      0);
 
-            //Debug.DrawRay(XD, new Vector3(0,1,0) * 10, Color.green, debug_RayDuration, false);
+            Quaternion vecB2vecAQuaternion = Quaternion.FromToRotation(XD.normalized, O.normalized);
+            Quaternion modelBaseQuaternion = Quaternion.AngleAxis(m_Base.GetComponent<Transform>().rotation.eulerAngles.y, Vector3.up);
 
-            Quaternion superCoolRotation = Quaternion.FromToRotation(XD.normalized, O.normalized);
+            Quaternion temp = vecB2vecAQuaternion * modelBaseQuaternion;
 
-            plusXplusZ = superCoolRotation * Quaternion.AngleAxis(m_Base.GetComponent<Transform>().rotation.eulerAngles.y, Vector3.up) *
-                                             new Vector3(XD.x + (XD.y * Mathf.Tan(m_Joints[i].GetComponent<RobotJoint>().maxAngleX * Mathf.Deg2Rad)),
-                                             XD.y,
-                                             XD.z + (XD.y * Mathf.Tan(m_Joints[i].GetComponent<RobotJoint>().maxAngleZ * Mathf.Deg2Rad)));
+            float yAxisAngleZ = XD.y * Mathf.Tan(m_Joints[i].GetComponent<RobotJoint>().maxAngleZ * Mathf.Deg2Rad);
+            float yAxisAngleX = XD.y * Mathf.Tan(m_Joints[i].GetComponent<RobotJoint>().maxAngleX * Mathf.Deg2Rad);
 
-
-            plusXminusZ = superCoolRotation * Quaternion.AngleAxis(m_Base.GetComponent<Transform>().rotation.eulerAngles.y, Vector3.up) *
-                                              new Vector3(XD.x + (XD.y * Mathf.Tan(m_Joints[i].GetComponent<RobotJoint>().maxAngleX * Mathf.Deg2Rad)),
-                                              XD.y,
-                                              XD.z - (XD.y * Mathf.Tan(m_Joints[i].GetComponent<RobotJoint>().minAngleZ * Mathf.Deg2Rad)));
+            plusXplusZ = temp *
+                                new Vector3(XD.x + yAxisAngleX,
+                                XD.y,
+                                XD.z + yAxisAngleZ);
 
 
-            minusXplusZ = superCoolRotation * Quaternion.AngleAxis(m_Base.GetComponent<Transform>().rotation.eulerAngles.y, Vector3.up) *
-                                              new Vector3(XD.x - (XD.y * Mathf.Tan(m_Joints[i].GetComponent<RobotJoint>().minAngleX * Mathf.Deg2Rad)),
-                                              XD.y,
-                                              XD.z + (XD.y * Mathf.Tan(m_Joints[i].GetComponent<RobotJoint>().maxAngleZ * Mathf.Deg2Rad)));
+            plusXminusZ = temp *
+                                new Vector3(XD.x + yAxisAngleX,
+                                XD.y,
+                                XD.z - yAxisAngleZ);
 
 
-            minusXminusZ = superCoolRotation * Quaternion.AngleAxis(m_Base.GetComponent<Transform>().rotation.eulerAngles.y, Vector3.up) *
-                                               new Vector3(XD.x - (XD.y * Mathf.Tan(m_Joints[i].GetComponent<RobotJoint>().minAngleX * Mathf.Deg2Rad)),
-                                               XD.y,
-                                               XD.z - (XD.y * Mathf.Tan(m_Joints[i].GetComponent<RobotJoint>().minAngleZ * Mathf.Deg2Rad)));
+            minusXplusZ = temp *
+                                new Vector3(XD.x - yAxisAngleX,
+                                XD.y,
+                                XD.z + yAxisAngleZ);
 
-            //plusXplusZ = Quaternion.AngleAxis(m_Base.GetComponent<Transform>().rotation.eulerAngles.y, Vector3.up) * plusXplusZ;
-            //plusXminusZ = Quaternion.AngleAxis(m_Base.GetComponent<Transform>().rotation.eulerAngles.y, Vector3.up) * plusXminusZ;
-            //minusXplusZ = Quaternion.AngleAxis(m_Base.GetComponent<Transform>().rotation.eulerAngles.y, Vector3.up) * minusXplusZ;
-            //minusXminusZ = Quaternion.AngleAxis(m_Base.GetComponent<Transform>().rotation.eulerAngles.y, Vector3.up) * minusXminusZ;
 
-            //XD = Quaternion.FromToRotation(m_Base.GetComponent<Transform>().position.normalized, new Vector3(1, 1, 1)) * XD;
-            XD = superCoolRotation * XD;
-            DrawStarAtPoint(XD + joints[i], Color.red);
+            minusXminusZ = temp *
+                                 new Vector3(XD.x - yAxisAngleX,
+                                 XD.y,
+                                 XD.z - yAxisAngleZ);
 
-            //Debug.DrawRay(plusXplusZ, (plusXminusZ - plusXplusZ).normalized * 100, Color.cyan, debug_RayDuration, false);
-            //Debug.DrawRay(plusXplusZ, (minusXplusZ - plusXplusZ).normalized * 100, Color.cyan, debug_RayDuration, false);
-            //Debug.DrawRay(minusXplusZ, (minusXminusZ - minusXplusZ).normalized * 100, Color.cyan, debug_RayDuration, false);
-            //Debug.DrawRay(minusXminusZ, (plusXminusZ - minusXminusZ).normalized * 100, Color.cyan, debug_RayDuration, false);
+            XD = vecB2vecAQuaternion * XD;
+            #endregion
+
+            #region 4. Check if the position of point O is above or below joint[i] on ray formed from joint[i-1] through joint[i]. If below, flip the constraint volume
+
+            //as point O must be on the said line, we can simply check if the distance O <-> joint[i] is greater than distance O <-> joint[i-1]
+            if(i>0 && (O + joints[i] - joints[i - 1]).magnitude < (joints[i] - joints[i-1]).magnitude)
+            {
+                isOBelowJoint = true;
+            }
+
+            #endregion
+
+            #region Get dot product of constraint volume edge and unconstrained joint[i+1] position
+
+            float distanceJoint2plusXplusZ = Vector3.Distance(plusXplusZ + joints[i], joints[i + 1]);
+            float distanceJoint2plusXminusZ = Vector3.Distance(plusXminusZ + joints[i], joints[i + 1]);
+            float distanceJoint2minusXplusZ = Vector3.Distance(minusXplusZ + joints[i], joints[i + 1]);
+            float distanceJoint2minusXminusZ = Vector3.Distance(minusXminusZ + joints[i], joints[i + 1]);
+
+            //Vector3 someVector = Vector3.Dot(linePointToPoint, direction);
+
+            #endregion
+
+            #region Debug: on
+            DrawStarAtPoint(XD + joints[i], Color.green);
+            DrawStarAtPoint(O + joints[i], Color.blue);
 
             Debug.DrawLine(plusXplusZ + joints[i],
                            plusXminusZ + joints[i],
@@ -333,19 +350,19 @@ public class FABRIKv2 : MonoBehaviour
                            debug_RayDuration, false);
 
             Debug.DrawLine(plusXminusZ + joints[i],
-                           XD + joints[i],
+                           O + joints[i],
                            Color.cyan,
                            debug_RayDuration, false);
             Debug.DrawLine(plusXplusZ + joints[i],
-                           XD + joints[i],
+                           O + joints[i],
                            Color.cyan,
                            debug_RayDuration, false);
             Debug.DrawLine(minusXplusZ + joints[i],
-                           XD + joints[i],
+                           O + joints[i],
                            Color.cyan,
                            debug_RayDuration, false);
             Debug.DrawLine(minusXminusZ + joints[i],
-                           XD + joints[i],
+                           O + joints[i],
                            Color.cyan,
                            debug_RayDuration, false);
 
@@ -365,172 +382,7 @@ public class FABRIKv2 : MonoBehaviour
                            joints[i],
                            Color.cyan,
                            debug_RayDuration, false);
-
-            //Debug.DrawLine(plusXplusZ,
-            //               plusXminusZ,
-            //               Color.cyan,
-            //               debug_RayDuration, false);
-            //Debug.DrawLine(plusXplusZ ,
-            //               minusXplusZ,
-            //               Color.cyan,
-            //               debug_RayDuration, false);
-            //Debug.DrawLine(minusXplusZ,
-            //               minusXminusZ,
-            //               Color.cyan,
-            //               debug_RayDuration, false);
-            //Debug.DrawLine(minusXminusZ,
-            //               plusXminusZ,
-            //               Color.cyan,
-            //               debug_RayDuration, false);
-
-            //Debug.DrawLine(plusXminusZ,
-            //               joints[i],
-            //               Color.cyan,
-            //               debug_RayDuration, false);
-            //Debug.DrawLine(plusXplusZ,
-            //               joints[i],
-            //               Color.cyan,
-            //               debug_RayDuration, false);
-            //Debug.DrawLine(minusXplusZ,
-            //               joints[i],
-            //               Color.cyan,
-            //               debug_RayDuration, false);
-            //Debug.DrawLine(minusXminusZ,
-            //               joints[i],
-            //               Color.cyan,
-            //               debug_RayDuration, false);
-
-            //Debug.DrawLine(plusXminusZ,
-            //               O,
-            //               Color.cyan,
-            //               debug_RayDuration, false);
-            //Debug.DrawLine(plusXplusZ,
-            //               O,
-            //               Color.cyan,
-            //               debug_RayDuration, false);
-            //Debug.DrawLine(minusXplusZ,
-            //               O,
-            //               Color.cyan,
-            //               debug_RayDuration, false);
-            //Debug.DrawLine(minusXminusZ,
-            //               O,
-            //               Color.cyan,
-            //               debug_RayDuration, false);
             #endregion
-
-            //Debug.DrawRay(origin, normalDirectionVector * 100, Color.red, debug_RayDuration, false);
-
-            ////get vector from point on line to point in space
-            //Vector3 linePointToPoint = debug_TestPoint.GetComponent<Transform>().position - joints[0];
-            //float t = Vector3.Dot(linePointToPoint, normalDirectionVector);
-            //Vector3 O = joints[0] + normalDirectionVector * t;
-            //O = O - origin;
-
-            //Debug.DrawRay(O + origin, (debug_TestPoint.GetComponent<Transform>().position - (O + origin)).normalized * 100, Color.magenta, debug_RayDuration, false);
-
-            //Vector3 XD = new Vector3(0,
-            //                         O.magnitude,
-            //                         0);
-
-            //Quaternion superCoolRotation = Quaternion.FromToRotation(XD, O);
-
-            //DrawStarAtPoint(XD + origin, Color.green);
-            //Debug.DrawRay(origin, XD.normalized * 100, Color.red, debug_RayDuration);
-
-            //Vector3 plusX = new Vector3(XD.x + (XD.y * Mathf.Tan(m_Joints[0].GetComponent<RobotJoint>().maxAngleX)),
-            //                    XD.y,
-            //                    XD.z);
-
-            //Vector3 minusX = new Vector3(XD.x - (XD.y * Mathf.Tan(m_Joints[0].GetComponent<RobotJoint>().minAngleX)),
-            //                     XD.y,
-            //                     XD.z);
-
-            //Vector3 plusZ = new Vector3(XD.x,
-            //                    XD.y,
-            //                    XD.z + (XD.y * Mathf.Tan(m_Joints[0].GetComponent<RobotJoint>().maxAngleZ)));
-
-            //Vector3 minusZ = new Vector3(XD.x,
-            //                     XD.y,
-            //                     XD.z - (XD.y * Mathf.Tan(m_Joints[0].GetComponent<RobotJoint>().maxAngleZ)));
-
-            //Vector3 plusXplusZ = superCoolRotation * new Vector3(XD.x + (XD.y * Mathf.Tan(m_Joints[0].GetComponent<RobotJoint>().maxAngleX * Mathf.Deg2Rad)),
-            //                                 XD.y,
-            //                                 XD.z + (XD.y * Mathf.Tan(m_Joints[0].GetComponent<RobotJoint>().maxAngleZ * Mathf.Deg2Rad)));
-            //DrawStarAtPoint(plusXplusZ + origin, Color.red);
-
-            //Vector3 plusXminusZ = superCoolRotation * new Vector3(XD.x + (XD.y * Mathf.Tan(m_Joints[0].GetComponent<RobotJoint>().maxAngleX * Mathf.Deg2Rad)),
-            //                                  XD.y,
-            //                                  XD.z - (XD.y * Mathf.Tan(m_Joints[0].GetComponent<RobotJoint>().minAngleZ * Mathf.Deg2Rad)));
-            //DrawStarAtPoint(plusXminusZ + origin, Color.red);
-
-            //Vector3 minusXplusZ = superCoolRotation * new Vector3(XD.x - (XD.y * Mathf.Tan(m_Joints[0].GetComponent<RobotJoint>().minAngleX * Mathf.Deg2Rad)),
-            //                                  XD.y,
-            //                                  XD.z + (XD.y * Mathf.Tan(m_Joints[0].GetComponent<RobotJoint>().maxAngleZ * Mathf.Deg2Rad)));
-            //DrawStarAtPoint(minusXplusZ + origin, Color.red);
-
-            //Vector3 minusXminusZ = superCoolRotation * new Vector3(XD.x - (XD.y * Mathf.Tan(m_Joints[0].GetComponent<RobotJoint>().minAngleX * Mathf.Deg2Rad)),
-            //                                   XD.y,
-            //                                   XD.z - (XD.y * Mathf.Tan(m_Joints[0].GetComponent<RobotJoint>().minAngleZ * Mathf.Deg2Rad)));
-            //DrawStarAtPoint(minusXminusZ + origin, Color.red);
-
-            //XD = superCoolRotation * XD;
-            //DrawStarAtPoint(XD + origin, Color.red);
-
-            ////Debug.DrawRay(plusXplusZ, (plusXminusZ - plusXplusZ).normalized * 100, Color.cyan, debug_RayDuration, false);
-            ////Debug.DrawRay(plusXplusZ, (minusXplusZ - plusXplusZ).normalized * 100, Color.cyan, debug_RayDuration, false);
-            ////Debug.DrawRay(minusXplusZ, (minusXminusZ - minusXplusZ).normalized * 100, Color.cyan, debug_RayDuration, false);
-            ////Debug.DrawRay(minusXminusZ, (plusXminusZ - minusXminusZ).normalized * 100, Color.cyan, debug_RayDuration, false);
-
-            //Debug.DrawLine(plusXplusZ + origin,
-            //               plusXminusZ + origin,
-            //               Color.cyan,
-            //               debug_RayDuration, false);
-            //Debug.DrawLine(plusXplusZ + origin,
-            //               minusXplusZ + origin,
-            //               Color.cyan,
-            //               debug_RayDuration, false);
-            //Debug.DrawLine(minusXplusZ + origin,
-            //               minusXminusZ + origin,
-            //               Color.cyan,
-            //               debug_RayDuration, false);
-            //Debug.DrawLine(minusXminusZ + origin,
-            //               plusXminusZ + origin,
-            //               Color.cyan,
-            //               debug_RayDuration, false);
-
-            //Debug.DrawLine(plusXminusZ + origin,
-            //               XD + origin,
-            //               Color.cyan,
-            //               debug_RayDuration, false);
-            //Debug.DrawLine(plusXplusZ + origin,
-            //               XD + origin,
-            //               Color.cyan,
-            //               debug_RayDuration, false);
-            //Debug.DrawLine(minusXplusZ + origin,
-            //               XD + origin,
-            //               Color.cyan,
-            //               debug_RayDuration, false);
-            //Debug.DrawLine(minusXminusZ + origin,
-            //               XD + origin,
-            //               Color.cyan,
-            //               debug_RayDuration, false);
-
-            //Debug.DrawLine(plusXminusZ + origin,
-            //               origin,
-            //               Color.cyan,
-            //               debug_RayDuration, false);
-            //Debug.DrawLine(plusXplusZ + origin,
-            //                origin,
-            //               Color.cyan,
-            //               debug_RayDuration, false);
-            //Debug.DrawLine(minusXplusZ + origin,
-            //               origin,
-            //               Color.cyan,
-            //               debug_RayDuration, false);
-            //Debug.DrawLine(minusXminusZ + origin,
-            //               origin,
-            //               Color.cyan,
-            //               debug_RayDuration, false);
         }
     }
 
