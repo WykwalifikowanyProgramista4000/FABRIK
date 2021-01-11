@@ -52,7 +52,7 @@ public class GradientDescent : MonoBehaviour
             Vector3 nextPoint = prevPoint + rotation * Joints[jointNo].GetComponent<RobotJoint>().StartOffset;
 
             prevPoint = nextPoint;
-            Debug.Log(prevPoint);
+            //Debug.Log(prevPoint);
         }
 
         //Debug.Log(prevPoint);
@@ -65,7 +65,7 @@ public class GradientDescent : MonoBehaviour
 
         float distance = Vector3.Distance(point, target);
 
-        Debug.Log(distance);
+        //Debug.Log(distance);
         return distance;
     }
 
@@ -94,7 +94,7 @@ public class GradientDescent : MonoBehaviour
 
             //angles[angleNo] = Mathf.Clamp(angles[angleNo], Joints[angleNo].GetComponent<RobotJoint>().minAngle, Joints[angleNo].GetComponent<RobotJoint>().maxAngle);
 
-            Debug.Log("angle " + angleNo + " : " + angles[angleNo]);
+            //Debug.Log("angle " + angleNo + " : " + angles[angleNo]);
 
             //for (int i = 0; i < Joints.Count; i++)
             //{

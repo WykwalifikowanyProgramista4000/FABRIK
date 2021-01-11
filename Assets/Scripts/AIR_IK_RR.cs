@@ -23,7 +23,7 @@ public class AIR_IK_RR : MonoBehaviour
         _lengthB = Vector3.Distance(Joints[1].GetComponent<Transform>().position,
                                     m_Effector.GetComponent<Transform>().position);
 
-        Debug.Log("_lengthA: " + _lengthA + "\n_lengthB: " + _lengthB);
+        //Debug.Log("_lengthA: " + _lengthA + "\n_lengthB: " + _lengthB);
     }
 
     private void Update()
@@ -43,7 +43,7 @@ public class AIR_IK_RR : MonoBehaviour
 
         double L;    // distance betwen origin point (Joint 0) and the target point (effector)
 
-        Debug.Log("z: " + Joints[0].GetComponent<Transform>().position.z + "   y: " + Joints[0].GetComponent<Transform>().position.z);
+        //Debug.Log("z: " + Joints[0].GetComponent<Transform>().position.z + "   y: " + Joints[0].GetComponent<Transform>().position.z);
 
         L = (Math.Pow(Joints[0].GetComponent<Transform>().position.z - targetPoint.z, 2) + Math.Pow(Joints[0].GetComponent<Transform>().position.y - targetPoint.y, 2) - Math.Pow(_lengthA, 2) - Math.Pow(_lengthB, 2)) / (2 * _lengthA * _lengthB);
 
@@ -54,7 +54,7 @@ public class AIR_IK_RR : MonoBehaviour
         Joints[0].GetComponent<Transform>().rotation = Quaternion.AngleAxis((float)alpha1 * Mathf.Rad2Deg, Joints[0].GetComponent<RobotJoint>().Axis);
         Joints[1].GetComponent<Transform>().rotation = Quaternion.AngleAxis((float)(alpha1+ alpha2) * Mathf.Rad2Deg, Joints[1].GetComponent<RobotJoint>().Axis);
 
-        Debug.Log("alpha1: " + alpha1 * Mathf.Rad2Deg + "\nalpha2: " + alpha2 * Mathf.Rad2Deg);
+        //Debug.Log("alpha1: " + alpha1 * Mathf.Rad2Deg + "\nalpha2: " + alpha2 * Mathf.Rad2Deg);
         
     }
 

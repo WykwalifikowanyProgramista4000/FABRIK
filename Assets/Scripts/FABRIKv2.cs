@@ -262,7 +262,6 @@ public class FABRIKv2 : MonoBehaviour
             linePointToPoint = (joints[i + 1] - joints[i]); //get vector from point on line to point in space
             t = Vector3.Dot(linePointToPoint, direction);
             O = joints[i] + direction * t;
-            Debug.DrawRay(O, (joints[i + 1] - O).normalized * 100, Color.magenta, debug_RayDuration, false);
             #endregion
 
             #region 3. Find the edges of the constraint that are on the same plane as the unconstrained joint and point O
@@ -317,20 +316,67 @@ public class FABRIKv2 : MonoBehaviour
 
             #endregion
 
-            #region Get dot product of constraint volume edge and unconstrained joint[i+1] position
+            #region 5. Get dot product of constraint volume edge and unconstrained joint[i+1] position
 
             float distanceJoint2plusXplusZ = Vector3.Distance(plusXplusZ + joints[i], joints[i + 1]);
             float distanceJoint2plusXminusZ = Vector3.Distance(plusXminusZ + joints[i], joints[i + 1]);
             float distanceJoint2minusXplusZ = Vector3.Distance(minusXplusZ + joints[i], joints[i + 1]);
             float distanceJoint2minusXminusZ = Vector3.Distance(minusXminusZ + joints[i], joints[i + 1]);
+            float a = 0;
+            float b = 0;
+            float alpha = 0;
+            float beta = 0;
+            float gamma = 0;
 
-            //Vector3 someVector = Vector3.Dot(linePointToPoint, direction);
+            if (distanceJoint2plusXplusZ < distanceJoint2minusXminusZ)
+            {
+                if(distanceJoint2plusXminusZ < distanceJoint2minusXplusZ)
+                {
+                    //a = XD.magnitude * Math.Sin(Mathf.Deg2Rad * m_Joints[i].GetComponent<RobotJoint>().maxAngleX);
+                    //a = (distanceJoint2plusXplusZ / distanceJoint2plusXminusZ) * (plusXplusZ - plusXminusZ).magnitude;
+
+                    alpha = Vector3.Angle((joints[i+1] - (O + joints[i])), plusXminusZ - O);
+                    beta = Vector3.Angle((plusXplusZ - plusXminusZ), (O - plusXminusZ));
+                    //gamma = Vector3.Angle((plusXminusZ - plusXplusZ), (O + joints[i] - joints[i + 1]));
+                    gamma = 180 - alpha - beta;
+
+                    //b = (Mathf.Tan((alpha - beta) / 2) * ((Mathf.Sin(alpha) / Mathf.Sin(beta)) + 1)) / (Mathf.Tan((alpha + beta) / 2) * ((Mathf.Sin(alpha) / Mathf.Sin(beta)) - 1));
+                    a = Vector3.Magnitude(plusXminusZ - O) * Mathf.Sin(alpha * Mathf.Deg2Rad) / Mathf.Sin(gamma * Mathf.Deg2Rad);
+
+                    if( i == joints.Count-2)
+                    {
+                        Debug.Log("alpha= " + alpha + "   beta= " + beta + "   gamma= " + gamma + "   a= " + a);
+                    }
+                }
+                else
+                {
+                    //a = XD.magnitude * Math.Sin(Mathf.Deg2Rad * m_Joints[i].GetComponent<RobotJoint>().minAngleX);
+                }
+            }
+            else
+            {
+                if (distanceJoint2plusXminusZ < distanceJoint2minusXplusZ)
+                {
+                    //a = XD.magnitude * Math.Sin(Mathf.Deg2Rad * m_Joints[i].GetComponent<RobotJoint>().minAngleZ);
+                }
+                else
+                {
+                    //a = XD.magnitude * Math.Sin(Mathf.Deg2Rad * m_Joints[i].GetComponent<RobotJoint>().maxAngleZ);
+                }
+            }
 
             #endregion
 
             #region Debug: on
-            DrawStarAtPoint(XD + joints[i], Color.green);
-            DrawStarAtPoint(O + joints[i], Color.blue);
+            Debug.DrawRay(O+joints[i], (joints[i + 1] - (O + joints[i])).normalized * 100, Color.magenta, debug_RayDuration, false);
+
+            //DrawStarAtPoint(XD + joints[i], Color.green);
+            //DrawStarAtPoint(O + joints[i], Color.blue);
+            //DrawStarAtPoint(plusXplusZ + joints[i], Color.red);
+            DrawStarAtPoint(plusXminusZ + joints[i], Color.magenta);
+            //DrawStarAtPoint((joints[i+1] - (XD + joints[i])).normalized * (float)a + XD + joints[i], Color.yellow);
+            DrawStarAtPoint((plusXplusZ - plusXminusZ).normalized * a + plusXminusZ + joints[i], Color.yellow);
+            //DrawStarAtPoint((joints[i + 1] - O - joints[i]).normalized * b + O + joints[i], Color.yellow);
 
             Debug.DrawLine(plusXplusZ + joints[i],
                            plusXminusZ + joints[i],
