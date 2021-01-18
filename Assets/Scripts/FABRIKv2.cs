@@ -191,7 +191,8 @@ public class FABRIKv2 : MonoBehaviour
             #region 4. Check if the position of point O is above or below joint[i] on ray formed from joint[i-1] through joint[i]. If below, flip the constraint volume
 
             //as point O must be on the said line, we can simply check if the distance O <-> joint[i] is greater than distance O <-> joint[i-1]
-            if(i>0 && (O + joints[i] - joints[i - 1]).magnitude < (joints[i] - joints[i-1]).magnitude)
+            //if(i>0 && (O + joints[i] - joints[i - 1]).magnitude < (joints[i] - joints[i-1]).magnitude)
+            if (i > 0 && Vector3.Angle(joints[i + 1] - joints[i], joints[i - 1] - joints[i]) < 90)
             {
                 isOBelowJoint = true;
             }
@@ -273,12 +274,41 @@ public class FABRIKv2 : MonoBehaviour
             #endregion
 
             #region 6. Correct next joint position according to constrains
+            
+            if (isOBelowJoint)
+            {
+                Vector3 T = (constrainedJointNextPosition - joints[i]).normalized * _moduleLengths[i];
+                float L = Vector3.Dot(T, (joints[i - 1] - joints[i]).normalized);
 
-            if (Vector3.Distance(joints[i+1], O + joints[i]) > Vector3.Distance(constrainedJointNextPosition, O + joints[i]))
+                Vector3 M = (joints[i - 1] - joints[i]).normalized * L;
+                Vector3 Mprime = (joints[i] - joints[i-1]).normalized * L;
+                Vector3 Tprime = T - M + Mprime;
+
+                DrawStarAtPoint(joints[i], Color.red);
+                DrawStarAtPoint(T + joints[i], Color.red);
+                DrawStarAtPoint(M + joints[i], Color.green);
+
+                Debug.DrawLine(joints[i],
+                          M + joints[i],
+                          Color.green,
+                          debug_RayDuration, false);
+
+                DrawStarAtPoint(Mprime + joints[i], Color.yellow);
+                DrawStarAtPoint(Tprime + joints[i], Color.magenta);
+
+                joints[i + 1] = joints[i] + Tprime;
+            }
+            else if (Vector3.Distance(joints[i+1], O + joints[i]) > Vector3.Distance(constrainedJointNextPosition, O + joints[i]))
             {
                 joints[i + 1] = (constrainedJointNextPosition - joints[i]).normalized * _moduleLengths[i] + joints[i];
             }
 
+            #endregion
+
+            #region 7. End statements
+            
+            isOBelowJoint = false;
+            
             #endregion
 
             #region Debug: on

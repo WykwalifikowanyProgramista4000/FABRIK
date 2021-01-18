@@ -6013,12 +6013,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Axis: {x: 0, y: 0, z: 0}
-  minAngleX: 30
-  maxAngleX: 30
+  minAngleX: 20
+  maxAngleX: 20
   minAngleY: 0
   maxAngleY: 0
-  minAngleZ: 30
-  maxAngleZ: 30
+  minAngleZ: 40
+  maxAngleZ: 40
   StartOffset: {x: 0, y: 0, z: 0}
   minAngle: 0
   maxAngle: 0
