@@ -6,26 +6,31 @@ using System.Threading;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-public class FABRIKv2 : MonoBehaviour
+public class FABRIKv3 : MonoBehaviour
 {
     [Header("--- Components ---")]
-    [SerializeField] private GameObject m_TargetPoint;
-    [SerializeField] private GameObject m_Base;
-    [SerializeField] private List<GameObject> m_Joints = new List<GameObject>();
+    public GameObject m_TargetPoint;
+    public GameObject m_Base;
+    public List<GameObject> m_Joints;
 
     [Header("--- Settings ---")]
-    [SerializeField] private bool _constraintsOn = false;
-    [SerializeField] private int m_MaxFABRIKIterations = 20;
-    [SerializeField] private float m_DistanceFromTargetTolerance = 0.01f;
+    public bool _constraintsOn = false;
+    public int m_MaxFABRIKIterations = 20;
+    public float m_DistanceFromTargetTolerance = 0.01f;
 
     [Header("# DEBGUG #")]
-    [SerializeField] private GameObject debug_TestPoint;
-    [SerializeField] private float debug_RayDuration = 0.1f;
+    public GameObject debug_TestPoint;
+    public float debug_RayDuration = 0.1f;
 
-    private float[] _moduleLengths;
+    public float[] _moduleLengths;
+    public bool on = false;
 
-    void Start()
+    public void SetupFabrik(List<GameObject> joints, GameObject baseObject, GameObject targetPoint)
     {
+        m_Joints = joints;
+        m_Base = baseObject;
+        m_TargetPoint = targetPoint;
+
         _moduleLengths = new float[m_Joints.Count - 1];
 
         for (int i = 0; i < m_Joints.Count - 1; i++)
@@ -35,15 +40,20 @@ public class FABRIKv2 : MonoBehaviour
         }
     }
 
+    void Start()
+    {
+
+    }
+
 
     void Update()
     {
-        Fabrik();
+        //Fabrik();
         Vector3 target = m_TargetPoint.GetComponent<Transform>().position;      // saving the target global position
         Vector3 origin = m_Joints[0].GetComponent<Transform>().position;        // saving the origin global position
     }
 
-    private void Fabrik()
+    public void Fabrik()
     {
         int iterationCnt = 0;                                                   // seting the iteration constrain counter
         Vector3 target = m_TargetPoint.GetComponent<Transform>().position;      // saving the target global position
@@ -69,7 +79,7 @@ public class FABRIKv2 : MonoBehaviour
         {
             do
             {
-                FabrikForwards(joints, target);
+                FabrikForwards();
                 FabrikBackwards(joints, origin);
                 iterationCnt++;
             } while (Vector3.Distance(joints[joints.Count - 1], target) > m_DistanceFromTargetTolerance &&  // if we are in reach we use FABRIK to determine the joints positions
@@ -82,17 +92,40 @@ public class FABRIKv2 : MonoBehaviour
     }
 
 
-    public void FabrikForwards(List<Vector3> joints, Vector3 target)
-    {
-        joints[joints.Count - 1] = target;
+    //public void FabrikForwards()
+    //{
+    //    Vector3 target = m_TargetPoint.transform.position;
+    //    List<Vector3> joints = new List<Vector3>();
+    //    joints.AddRange(m_Joints.Select(x => x.transform.position));
 
-        for (int i = joints.Count - 1; i > 0; i--)
+    //    joints[joints.Count - 1] = target;
+
+    //    for (int i = joints.Count - 1; i > 0; i--)
+    //    {
+    //        joints[i - 1] = joints[i] + (joints[i - 1] - joints[i]).normalized * _moduleLengths[i - 1];
+    //    }
+
+    //}
+
+    public void FabrikForwards()
+    {
+        if (Vector3.Distance(m_TargetPoint.transform.position, m_Joints[m_Joints.Count -1].transform.position) <= m_DistanceFromTargetTolerance) { return; }
+
+        Vector3 origin = m_TargetPoint.transform.position;
+        List<Vector3> joints = new List<Vector3>();
+        joints.AddRange(m_Joints.Select(x => x.transform.position));
+
+        joints.Reverse();
+        FabrikBackwards(joints, origin);
+        joints.Reverse();
+
+        for (int i = 0; i < joints.Count; i++)
         {
-            joints[i - 1] = joints[i] + (joints[i - 1] - joints[i]).normalized * _moduleLengths[i - 1];
+            m_Joints[i].GetComponent<Transform>().position = joints[i];
         }
 
+        RotateJoints(joints);
     }
-
 
     public void FabrikBackwards(List<Vector3> joints, Vector3 origin)    // TODO: need to add constrains here! With them, I can locate new global position for the joint
     {
@@ -202,6 +235,10 @@ public class FABRIKv2 : MonoBehaviour
             if (i > 0 && Vector3.Angle(joints[i + 1] - joints[i], joints[i - 1] - joints[i]) < 90)
             {
                 isOBelowJoint = true;
+            }
+            else if(i == 0)
+            {
+
             }
 
             #endregion
