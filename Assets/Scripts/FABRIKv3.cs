@@ -16,14 +16,16 @@ public class FABRIKv3 : MonoBehaviour
     [Header("--- Settings ---")]
     public bool _constraintsOn = false;
     public int m_MaxFABRIKIterations = 20;
-    public float m_DistanceFromTargetTolerance = 0.01f;
+    public float m_DistanceFromTargetTolerance = 0.1f;
 
     [Header("# DEBGUG #")]
     public GameObject debug_TestPoint;
-    public float debug_RayDuration = 0.1f;
+    private const float debug_RayDuration = 0.1f;
 
     public float[] _moduleLengths;
     public bool on = false;
+
+    List<Vector3> _jointsForDebugDrawing = new List<Vector3>();
 
     public void SetupFabrik(List<GameObject> joints, GameObject baseObject, GameObject targetPoint)
     {
@@ -42,15 +44,13 @@ public class FABRIKv3 : MonoBehaviour
 
     void Start()
     {
-
+        
     }
 
 
     void Update()
     {
-        //Fabrik();
-        Vector3 target = m_TargetPoint.GetComponent<Transform>().position;      // saving the target global position
-        Vector3 origin = m_Joints[0].GetComponent<Transform>().position;        // saving the origin global position
+
     }
 
     public void Fabrik()
@@ -79,7 +79,7 @@ public class FABRIKv3 : MonoBehaviour
         {
             do
             {
-                FabrikForwards();
+                Forwards();
                 FabrikBackwards(joints, origin);
                 iterationCnt++;
             } while (Vector3.Distance(joints[joints.Count - 1], target) > m_DistanceFromTargetTolerance &&  // if we are in reach we use FABRIK to determine the joints positions
@@ -107,7 +107,7 @@ public class FABRIKv3 : MonoBehaviour
 
     //}
 
-    public void FabrikForwards()
+    public void Forwards()
     {
         if (Vector3.Distance(m_TargetPoint.transform.position, m_Joints[m_Joints.Count -1].transform.position) <= m_DistanceFromTargetTolerance) { return; }
 
@@ -119,16 +119,30 @@ public class FABRIKv3 : MonoBehaviour
         FabrikBackwards(joints, origin);
         joints.Reverse();
 
-        for (int i = 0; i < joints.Count; i++)
-        {
-            m_Joints[i].GetComponent<Transform>().position = joints[i];
-        }
+        //for (int i = 0; i < joints.Count; i++)
+        //{
+        //    m_Joints[i].GetComponent<Transform>().position = joints[i];
+        //}
 
         RotateJoints(joints);
+
+        m_Joints[0].transform.position = joints[0];
+    }
+
+    public void Backwards()
+    {
+        Vector3 origin = m_Base.transform.position;
+        List<Vector3> joints = new List<Vector3>();
+        joints.AddRange(m_Joints.Select(x => x.transform.position));
+
+        FabrikBackwards(joints, origin);
+        RotateJoints(joints);
+        m_Joints[0].transform.position = m_Base.transform.position;
     }
 
     public void FabrikBackwards(List<Vector3> joints, Vector3 origin)    // TODO: need to add constrains here! With them, I can locate new global position for the joint
     {
+
         Vector3 direction;
         Vector3 linePointToPoint;
         float t;
@@ -178,8 +192,6 @@ public class FABRIKv3 : MonoBehaviour
 
             if (_constraintsOn)
             {
-            #region 2. Constraints
-
             #region 2.2 Cast a line L from i joint that goes through i and i-1 joint and find the point O on the newly created line at the intersection with the perpendicular line cast to L
             linePointToPoint = (joints[i + 1] - joints[i]); //get vector from point on line to point in space
             t = Vector3.Dot(linePointToPoint, direction);
@@ -417,11 +429,16 @@ public class FABRIKv3 : MonoBehaviour
                            Color.cyan,
                            debug_RayDuration, false);
             #endregion
-
-            #endregion
             }
 
 
+        }
+
+        DrawStarAtPoint(joints[0], Color.magenta, 10);
+        for (int j = 0; j < joints.Count - 1; j++)
+        {
+            Debug.DrawLine(joints[j], joints[j + 1], Color.red, 10);
+            DrawStarAtPoint(joints[j + 1], Color.magenta, 10);
         }
     }
 
@@ -432,7 +449,7 @@ public class FABRIKv3 : MonoBehaviour
         //Quaternion angles;
         for (int i = 0; i < joints.Count - 1; i++)  // obtaining the needed rotationWebexowi ns for the fount joint positions
         {
-            m_Joints[i].GetComponent<Transform>().rotation = Quaternion.LookRotation((joints[i + 1] - m_Joints[i].GetComponent<Transform>().position).normalized) * Quaternion.AngleAxis(90, new Vector3(1, 0, 0));
+            m_Joints[i].GetComponent<Transform>().rotation = Quaternion.LookRotation((joints[i + 1] - joints[i]).normalized) * Quaternion.AngleAxis(90, new Vector3(1, 0, 0));
         }
 
         #region DEBUG: off
@@ -466,50 +483,50 @@ public class FABRIKv3 : MonoBehaviour
         #endregion
     }
 
-    public void DrawStarAtPoint(Vector3 point, Color color)
+    public void DrawStarAtPoint(Vector3 point, Color color, float duration = debug_RayDuration)
     {
         float armLength = 0.05f;
 
-        Debug.DrawRay(point, (new Vector3(0, 0, 1)).normalized * armLength, color, debug_RayDuration, false);
-        Debug.DrawRay(point, (new Vector3(0, 1, 1)).normalized * armLength, color, debug_RayDuration, false);
-        Debug.DrawRay(point, (new Vector3(1, 1, 1)).normalized * armLength, color, debug_RayDuration, false);
-        Debug.DrawRay(point, (new Vector3(1, 1, 0)).normalized * armLength, color, debug_RayDuration, false);
-        Debug.DrawRay(point, (new Vector3(1, 0, 1)).normalized * armLength, color, debug_RayDuration, false);
-        Debug.DrawRay(point, (new Vector3(1, 0, 0)).normalized * armLength, color, debug_RayDuration, false);
+        Debug.DrawRay(point, (new Vector3(0, 0, 1)).normalized * armLength, color, duration, false);
+        Debug.DrawRay(point, (new Vector3(0, 1, 1)).normalized * armLength, color, duration, false);
+        Debug.DrawRay(point, (new Vector3(1, 1, 1)).normalized * armLength, color, duration, false);
+        Debug.DrawRay(point, (new Vector3(1, 1, 0)).normalized * armLength, color, duration, false);
+        Debug.DrawRay(point, (new Vector3(1, 0, 1)).normalized * armLength, color, duration, false);
+        Debug.DrawRay(point, (new Vector3(1, 0, 0)).normalized * armLength, color, duration, false);
 
-        Debug.DrawRay(point, (new Vector3(-0, -0, -1)).normalized * armLength, color, debug_RayDuration, false);
-        Debug.DrawRay(point, (new Vector3(-0, -1, -1)).normalized * armLength, color, debug_RayDuration, false);
-        Debug.DrawRay(point, (new Vector3(-1, -1, -1)).normalized * armLength, color, debug_RayDuration, false);
-        Debug.DrawRay(point, (new Vector3(-1, -1, -0)).normalized * armLength, color, debug_RayDuration, false);
-        Debug.DrawRay(point, (new Vector3(-1, -0, -1)).normalized * armLength, color, debug_RayDuration, false);
-        Debug.DrawRay(point, (new Vector3(-1, -0, -0)).normalized * armLength, color, debug_RayDuration, false);
+        Debug.DrawRay(point, (new Vector3(-0, -0, -1)).normalized * armLength, color, duration, false);
+        Debug.DrawRay(point, (new Vector3(-0, -1, -1)).normalized * armLength, color, duration, false);
+        Debug.DrawRay(point, (new Vector3(-1, -1, -1)).normalized * armLength, color, duration, false);
+        Debug.DrawRay(point, (new Vector3(-1, -1, -0)).normalized * armLength, color, duration, false);
+        Debug.DrawRay(point, (new Vector3(-1, -0, -1)).normalized * armLength, color, duration, false);
+        Debug.DrawRay(point, (new Vector3(-1, -0, -0)).normalized * armLength, color, duration, false);
 
-        Debug.DrawRay(point, (new Vector3(-0, -0, 1)).normalized * armLength, color, debug_RayDuration, false);
-        Debug.DrawRay(point, (new Vector3(-0, -1, 1)).normalized * armLength, color, debug_RayDuration, false);
-        Debug.DrawRay(point, (new Vector3(-1, -1, 1)).normalized * armLength, color, debug_RayDuration, false);
-        Debug.DrawRay(point, (new Vector3(-1, -1, 0)).normalized * armLength, color, debug_RayDuration, false);
-        Debug.DrawRay(point, (new Vector3(-1, -0, 1)).normalized * armLength, color, debug_RayDuration, false);
-        Debug.DrawRay(point, (new Vector3(-1, -0, 0)).normalized * armLength, color, debug_RayDuration, false);
+        Debug.DrawRay(point, (new Vector3(-0, -0, 1)).normalized * armLength, color, duration, false);
+        Debug.DrawRay(point, (new Vector3(-0, -1, 1)).normalized * armLength, color, duration, false);
+        Debug.DrawRay(point, (new Vector3(-1, -1, 1)).normalized * armLength, color, duration, false);
+        Debug.DrawRay(point, (new Vector3(-1, -1, 0)).normalized * armLength, color, duration, false);
+        Debug.DrawRay(point, (new Vector3(-1, -0, 1)).normalized * armLength, color, duration, false);
+        Debug.DrawRay(point, (new Vector3(-1, -0, 0)).normalized * armLength, color, duration, false);
 
-        Debug.DrawRay(point, (new Vector3(-0, 0, 1)).normalized * armLength, color, debug_RayDuration, false);
-        Debug.DrawRay(point, (new Vector3(-0, 1, 1)).normalized * armLength, color, debug_RayDuration, false);
-        Debug.DrawRay(point, (new Vector3(-1, 1, 1)).normalized * armLength, color, debug_RayDuration, false);
-        Debug.DrawRay(point, (new Vector3(-1, 1, 0)).normalized * armLength, color, debug_RayDuration, false);
-        Debug.DrawRay(point, (new Vector3(-1, 0, 1)).normalized * armLength, color, debug_RayDuration, false);
-        Debug.DrawRay(point, (new Vector3(-1, 0, 0)).normalized * armLength, color, debug_RayDuration, false);
+        Debug.DrawRay(point, (new Vector3(-0, 0, 1)).normalized * armLength, color, duration, false);
+        Debug.DrawRay(point, (new Vector3(-0, 1, 1)).normalized * armLength, color, duration, false);
+        Debug.DrawRay(point, (new Vector3(-1, 1, 1)).normalized * armLength, color, duration, false);
+        Debug.DrawRay(point, (new Vector3(-1, 1, 0)).normalized * armLength, color, duration, false);
+        Debug.DrawRay(point, (new Vector3(-1, 0, 1)).normalized * armLength, color, duration, false);
+        Debug.DrawRay(point, (new Vector3(-1, 0, 0)).normalized * armLength, color, duration, false);
 
-        Debug.DrawRay(point, (new Vector3(-0, 0, -1)).normalized * armLength, color, debug_RayDuration, false);
-        Debug.DrawRay(point, (new Vector3(-0, 1, -1)).normalized * armLength, color, debug_RayDuration, false);
-        Debug.DrawRay(point, (new Vector3(-1, 1, -1)).normalized * armLength, color, debug_RayDuration, false);
-        Debug.DrawRay(point, (new Vector3(-1, 1, -0)).normalized * armLength, color, debug_RayDuration, false);
-        Debug.DrawRay(point, (new Vector3(-1, 0, -1)).normalized * armLength, color, debug_RayDuration, false);
-        Debug.DrawRay(point, (new Vector3(-1, 0, -0)).normalized * armLength, color, debug_RayDuration, false);
+        Debug.DrawRay(point, (new Vector3(-0, 0, -1)).normalized * armLength, color, duration, false);
+        Debug.DrawRay(point, (new Vector3(-0, 1, -1)).normalized * armLength, color, duration, false);
+        Debug.DrawRay(point, (new Vector3(-1, 1, -1)).normalized * armLength, color, duration, false);
+        Debug.DrawRay(point, (new Vector3(-1, 1, -0)).normalized * armLength, color, duration, false);
+        Debug.DrawRay(point, (new Vector3(-1, 0, -1)).normalized * armLength, color, duration, false);
+        Debug.DrawRay(point, (new Vector3(-1, 0, -0)).normalized * armLength, color, duration, false);
 
-        Debug.DrawRay(point, (new Vector3(0, 0, -1)).normalized * armLength, color, debug_RayDuration, false);
-        Debug.DrawRay(point, (new Vector3(0, 1, -1)).normalized * armLength, color, debug_RayDuration, false);
-        Debug.DrawRay(point, (new Vector3(1, 1, -1)).normalized * armLength, color, debug_RayDuration, false);
-        Debug.DrawRay(point, (new Vector3(1, 1, -0)).normalized * armLength, color, debug_RayDuration, false);
-        Debug.DrawRay(point, (new Vector3(1, 0, -1)).normalized * armLength, color, debug_RayDuration, false);
-        Debug.DrawRay(point, (new Vector3(1, 0, -0)).normalized * armLength, color, debug_RayDuration, false);
+        Debug.DrawRay(point, (new Vector3(0, 0, -1)).normalized * armLength, color, duration, false);
+        Debug.DrawRay(point, (new Vector3(0, 1, -1)).normalized * armLength, color, duration, false);
+        Debug.DrawRay(point, (new Vector3(1, 1, -1)).normalized * armLength, color, duration, false);
+        Debug.DrawRay(point, (new Vector3(1, 1, -0)).normalized * armLength, color, duration, false);
+        Debug.DrawRay(point, (new Vector3(1, 0, -1)).normalized * armLength, color, duration, false);
+        Debug.DrawRay(point, (new Vector3(1, 0, -0)).normalized * armLength, color, duration, false);
     }
 }
