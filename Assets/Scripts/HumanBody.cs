@@ -21,28 +21,33 @@ public class HumanBody : MonoBehaviour
     [SerializeField] private bool _upperChainConstraints = false;
     private FABRIKv3 _upperChainFabrik = new FABRIKv3();
 
+    [Header("--- Left Arm ---")]
     [SerializeField] private List<GameObject> m_leftArm = new List<GameObject>();
     [SerializeField] private bool _leftArmLocked = false;
     [SerializeField] private bool _leftArmContinousFabrik = false;
     [SerializeField] private bool _leftArmConstraints = false;
     private FABRIKv3 _leftArmFabrik = new FABRIKv3();
 
+    [Header("--- Right Arm ---")]
     [SerializeField] private List<GameObject> m_rightArm = new List<GameObject>();
     [SerializeField] private bool _rightArmLocked = false;
     [SerializeField] private bool _rightArmContinousFabrik = false;
     [SerializeField] private bool _rightArmConstraints = false;
     private FABRIKv3 _rightArmFabrik = new FABRIKv3();
 
+    [Header("--- Head ---")]
     [SerializeField] private List<GameObject> m_Head = new List<GameObject>();
     [SerializeField] private bool _headLocked = false;
 
     [Header("--- Lower Chain ---")]
     [SerializeField] private GameObject m_lowerChainSubbase;
-    [SerializeField] private List<GameObject> m_lowerChain = new List<GameObject>();    
+    [SerializeField] private List<GameObject> m_lowerChain = new List<GameObject>();
 
+    [Header("--- Left Leg ---")]
     [SerializeField] private List<GameObject> m_leftLeg = new List<GameObject>();
     [SerializeField] private bool _leftLegLocked = true;
 
+    [Header("--- Right Leg ---")]
     [SerializeField] private List<GameObject> m_rightLeg = new List<GameObject>();
     [SerializeField] private bool _rightLegLocked = true;
 
@@ -60,8 +65,8 @@ public class HumanBody : MonoBehaviour
 
     private void Start()
     {
-        _leftArmFabrik.SetupFabrik(m_leftArm, m_BodyBase, m_LeftArmTarget);
-        //_leftArmFabrik.SetupFabrik(m_leftArm, m_upperChain[m_upperChain.Count - 1], m_LeftArmTarget);
+        //_leftArmFabrik.SetupFabrik(m_leftArm, m_BodyBase, m_LeftArmTarget);
+        _leftArmFabrik.SetupFabrik(m_leftArm, m_upperChain[m_upperChain.Count - 1], m_LeftArmTarget);
         _rightArmFabrik.SetupFabrik(m_rightArm, m_upperChain[m_upperChain.Count - 1], m_RightArmTarget);
         _upperChainFabrik.SetupFabrik(m_upperChain, m_BodyBase, m_upperChainSubbase);
     }
@@ -90,10 +95,10 @@ public class HumanBody : MonoBehaviour
         {
             _upperChainFabrik.Backwards();
 
-            //m_upperChainSubbase.transform.position = m_upperChain[m_upperChain.Count - 1].transform.position;
+            m_upperChainSubbase.transform.position = m_upperChain[m_upperChain.Count - 1].transform.position;
 
-            //_leftArmFabrik.Backwards();
-            //_rightArmFabrik.Backwards();
+            _leftArmFabrik.Backwards();
+            _rightArmFabrik.Backwards();
 
 
             _doFabrikBackwardsOnce = false;
@@ -104,6 +109,14 @@ public class HumanBody : MonoBehaviour
             _leftArmFabrik.Backwards();
             _LeftArmDoFabrikBackwardsOnce = false;
         }
+
+        if (_leftArmContinousFabrik)
+        {
+            _leftArmFabrik.Forwards();
+            _leftArmFabrik.Backwards();
+        }
+
+
     }
 
     void DetermineSubbasePosition(GameObject subbase , List<GameObject> chainBases)

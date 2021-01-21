@@ -14,6 +14,7 @@ public class FABRIKv3 : MonoBehaviour
     public List<GameObject> m_Joints;
 
     [Header("--- Settings ---")]
+    public Quaternion _fromBaseDirection;
     public bool _constraintsOn = false;
     public int m_MaxFABRIKIterations = 20;
     public float m_DistanceFromTargetTolerance = 0.1f;
@@ -24,8 +25,8 @@ public class FABRIKv3 : MonoBehaviour
 
     public float[] _moduleLengths;
     public bool on = false;
+    private bool _forwardsFlag = false;
 
-    List<Vector3> _jointsForDebugDrawing = new List<Vector3>();
 
     public void SetupFabrik(List<GameObject> joints, GameObject baseObject, GameObject targetPoint)
     {
@@ -40,6 +41,8 @@ public class FABRIKv3 : MonoBehaviour
             _moduleLengths[i] = Vector3.Distance(m_Joints[i].GetComponent<Transform>().position,
                                                  m_Joints[i + 1].GetComponent<Transform>().position);
         }
+
+        _fromBaseDirection = Quaternion.FromToRotation(Vector3.up, (m_Joints[1].transform.position - m_Joints[0].transform.position).normalized);
     }
 
     void Start()
@@ -80,7 +83,7 @@ public class FABRIKv3 : MonoBehaviour
             do
             {
                 Forwards();
-                FabrikBackwards(joints, origin);
+                Fabrik(joints, origin);
                 iterationCnt++;
             } while (Vector3.Distance(joints[joints.Count - 1], target) > m_DistanceFromTargetTolerance &&  // if we are in reach we use FABRIK to determine the joints positions
                    iterationCnt < m_MaxFABRIKIterations);                                                // in global coordinates
@@ -115,17 +118,10 @@ public class FABRIKv3 : MonoBehaviour
         List<Vector3> joints = new List<Vector3>();
         joints.AddRange(m_Joints.Select(x => x.transform.position));
 
+        joints.Reverse();        
+        Fabrik(joints, origin);
         joints.Reverse();
-        FabrikBackwards(joints, origin);
-        joints.Reverse();
-
-        //for (int i = 0; i < joints.Count; i++)
-        //{
-        //    m_Joints[i].GetComponent<Transform>().position = joints[i];
-        //}
-
         RotateJoints(joints);
-
         m_Joints[0].transform.position = joints[0];
     }
 
@@ -135,12 +131,12 @@ public class FABRIKv3 : MonoBehaviour
         List<Vector3> joints = new List<Vector3>();
         joints.AddRange(m_Joints.Select(x => x.transform.position));
 
-        FabrikBackwards(joints, origin);
+        Fabrik(joints, origin, true);
         RotateJoints(joints);
         m_Joints[0].transform.position = m_Base.transform.position;
     }
 
-    public void FabrikBackwards(List<Vector3> joints, Vector3 origin)    // TODO: need to add constrains here! With them, I can locate new global position for the joint
+    public void Fabrik(List<Vector3> joints, Vector3 origin, bool backwards = false)    // TODO: need to add constrains here! With them, I can locate new global position for the joint
     {
 
         Vector3 direction;
@@ -178,8 +174,7 @@ public class FABRIKv3 : MonoBehaviour
             else
             {
                 #region DEBUG: off : casting the line along the arm
-                direction = (joints[0] - m_Base.GetComponent<Transform>().position).normalized;
-
+                direction = (_fromBaseDirection * m_Base.transform.rotation * Vector3.up).normalized;
                 // Linia wzdłóż lokalnej osi Y
                 //Debug.DrawRay(joints[0], direction.normalized * 100, Color.red, debug_RayDuration, false);
                 //Debug.DrawRay(joints[0], direction.normalized * -100, Color.red, debug_RayDuration, false);
@@ -190,256 +185,257 @@ public class FABRIKv3 : MonoBehaviour
             joints[i + 1] = joints[i] + (joints[i + 1] - joints[i]).normalized * _moduleLengths[i];
             #endregion
 
-            if (_constraintsOn)
+            if (_constraintsOn && backwards)
             {
-            #region 2.2 Cast a line L from i joint that goes through i and i-1 joint and find the point O on the newly created line at the intersection with the perpendicular line cast to L
-            linePointToPoint = (joints[i + 1] - joints[i]); //get vector from point on line to point in space
-            t = Vector3.Dot(linePointToPoint, direction);
-            O = joints[i] + direction * t;
-            #endregion
+                #region 2.2 Cast a line L from i joint that goes through i and i-1 joint and find the point O on the newly created line at the intersection with the perpendicular line cast to L
+                linePointToPoint = (joints[i + 1] - joints[i]); //get vector from point on line to point in space
+                t = Vector3.Dot(linePointToPoint, direction);
+                O = joints[i] + direction * t;
+                #endregion
 
-            #region 2.3 Find the edges of the constraint that are on the same plane as the unconstrained joint and point O
+                #region 2.3 Find the edges of the constraint that are on the same plane as the unconstrained joint and point O
 
-            O = O - joints[i];
+                O = O - joints[i];
 
-            Vector3 XD = new Vector3(0,
-                                     O.magnitude,
-                                     0);
+                Vector3 XD = new Vector3(0,
+                                         O.magnitude,
+                                         0);
+                //(_fromBaseDirection * m_Base.transform.rotation * Vector3.up).normalized;
+                Quaternion vecB2vecAQuaternion = Quaternion.FromToRotation(XD.normalized, O.normalized); 
+                //Quaternion modelBaseQuaternion = m_Base.transform.rotation;
+                //Quaternion modelBaseQuaternion = Quaternion.AngleAxis(m_Base.GetComponent<Transform>().rotation.eulerAngles.y, Vector3.up); // TODO update with new way of determining the rotation of base
+                Quaternion modelBaseQuaternion = Quaternion.AngleAxis(m_Base.GetComponent<Transform>().rotation.eulerAngles.y, Vector3.up); // TODO ogarnac te rotacje jestem blisko wiem to wiem XD
+                Quaternion temp = vecB2vecAQuaternion * modelBaseQuaternion;
 
-            Quaternion vecB2vecAQuaternion = Quaternion.FromToRotation(XD.normalized, O.normalized);
-            Quaternion modelBaseQuaternion = Quaternion.AngleAxis(m_Base.GetComponent<Transform>().rotation.eulerAngles.y, Vector3.up);
+                float yAxisAngleZ = XD.y * Mathf.Tan(m_Joints[i].GetComponent<RobotJoint>().maxAngleZ * Mathf.Deg2Rad);
+                float yAxisAngleX = XD.y * Mathf.Tan(m_Joints[i].GetComponent<RobotJoint>().maxAngleX * Mathf.Deg2Rad);
 
-            Quaternion temp = vecB2vecAQuaternion * modelBaseQuaternion;
-
-            float yAxisAngleZ = XD.y * Mathf.Tan(m_Joints[i].GetComponent<RobotJoint>().maxAngleZ * Mathf.Deg2Rad);
-            float yAxisAngleX = XD.y * Mathf.Tan(m_Joints[i].GetComponent<RobotJoint>().maxAngleX * Mathf.Deg2Rad);
-
-            plusXplusZ = temp *
-                                new Vector3(XD.x + yAxisAngleX,
-                                XD.y,
-                                XD.z + yAxisAngleZ);
-
-
-            plusXminusZ = temp *
-                                new Vector3(XD.x + yAxisAngleX,
-                                XD.y,
-                                XD.z - yAxisAngleZ);
+                plusXplusZ = temp *
+                                    new Vector3(XD.x + yAxisAngleX,
+                                    XD.y,
+                                    XD.z + yAxisAngleZ);
 
 
-            minusXplusZ = temp *
-                                new Vector3(XD.x - yAxisAngleX,
-                                XD.y,
-                                XD.z + yAxisAngleZ);
+                plusXminusZ = temp *
+                                    new Vector3(XD.x + yAxisAngleX,
+                                    XD.y,
+                                    XD.z - yAxisAngleZ);
 
 
-            minusXminusZ = temp *
-                                 new Vector3(XD.x - yAxisAngleX,
-                                 XD.y,
-                                 XD.z - yAxisAngleZ);
+                minusXplusZ = temp *
+                                    new Vector3(XD.x - yAxisAngleX,
+                                    XD.y,
+                                    XD.z + yAxisAngleZ);
 
-            XD = vecB2vecAQuaternion * XD;
-            #endregion
 
-            #region 2.4 Check if the position of point O is above or below joint[i] on ray formed from joint[i-1] through joint[i]. If below, flip the constraint volume
+                minusXminusZ = temp *
+                                     new Vector3(XD.x - yAxisAngleX,
+                                     XD.y,
+                                     XD.z - yAxisAngleZ);
 
-            //as point O must be on the said line, we can simply check if the distance O <-> joint[i] is greater than distance O <-> joint[i-1]
-            //if(i>0 && (O + joints[i] - joints[i - 1]).magnitude < (joints[i] - joints[i-1]).magnitude)
-            if (i > 0 && Vector3.Angle(joints[i + 1] - joints[i], joints[i - 1] - joints[i]) < 90)
-            {
-                isOBelowJoint = true;
-            }
-            else if(i == 0)
-            {
+                XD = vecB2vecAQuaternion * XD;
+                #endregion
 
-            }
+                #region 2.4 Check if the position of point O is above or below joint[i] on ray formed from joint[i-1] through joint[i]. If below, flip the constraint volume
 
-            #endregion
+                //as point O must be on the said line, we can simply check if the distance O <-> joint[i] is greater than distance O <-> joint[i-1]
+                //if(i>0 && (O + joints[i] - joints[i - 1]).magnitude < (joints[i] - joints[i-1]).magnitude)
+                if (i > 0 && Vector3.Angle(joints[i + 1] - joints[i], joints[i - 1] - joints[i]) < 90)
+                {
+                    isOBelowJoint = true;
+                }
+                else if(i == 0)
+                {
 
-            #region 2.5 Get crossing point of constraint volume edge and unconstrained joint[i+1] position
+                }
 
-            float a=0;
-            float alpha;
-            float beta;
-            float gamma;
-            float theta = Vector3.Angle(plusXplusZ-O, plusXminusZ-O);
+                #endregion
 
-            Vector3 OXD = joints[i + 1] - O - joints[i];
-            Vector3 constrainedJointNextPosition = new Vector3();
+                #region 2.5 Get crossing point of constraint volume edge and unconstrained joint[i+1] position
+
+                float a=0;
+                float alpha;
+                float beta;
+                float gamma;
+                float theta = Vector3.Angle(plusXplusZ-O, plusXminusZ-O);
+
+                Vector3 OXD = joints[i + 1] - O - joints[i];
+                Vector3 constrainedJointNextPosition = new Vector3();
             
-            if (i == joints.Count - 2)
-            {
-                Debug.Log("plusXplusZ: " + Vector3.Angle(OXD, plusXplusZ - O) + "   minusXminusZ: " + Vector3.Angle(OXD, minusXminusZ - O) +
-                    "   plusXminusZ: " + Vector3.Angle(OXD, plusXminusZ - O) + "   minusXplusZ: " + Vector3.Angle(OXD, minusXplusZ - O) +
-                    "   angle: " + Vector3.Angle(OXD, (plusXplusZ - plusXminusZ) / 2) + "   theta: " + theta +
-                    "   isOBelowJoint: " + isOBelowJoint);
-            }
+                if (i == joints.Count - 2)
+                {
+                    Debug.Log("plusXplusZ: " + Vector3.Angle(OXD, plusXplusZ - O) + "   minusXminusZ: " + Vector3.Angle(OXD, minusXminusZ - O) +
+                        "   plusXminusZ: " + Vector3.Angle(OXD, plusXminusZ - O) + "   minusXplusZ: " + Vector3.Angle(OXD, minusXplusZ - O) +
+                        "   angle: " + Vector3.Angle(OXD, (plusXplusZ - plusXminusZ) / 2) + "   theta: " + theta +
+                        "   isOBelowJoint: " + isOBelowJoint);
+                }
 
-            if (Vector3.Angle(OXD, (plusXplusZ + plusXminusZ) / 2 - O) < theta / 2) // ćwiartka 1
-            {
-                alpha = Vector3.Angle((joints[i+1] - (O + joints[i])), plusXminusZ - O);
-                beta = Vector3.Angle((plusXplusZ - plusXminusZ), (O - plusXminusZ));
-                gamma = 180 - alpha - beta;
-                a = Vector3.Magnitude(plusXminusZ - O) * Mathf.Sin(alpha * Mathf.Deg2Rad) / Mathf.Sin(gamma * Mathf.Deg2Rad);
+                if (Vector3.Angle(OXD, (plusXplusZ + plusXminusZ) / 2 - O) < theta / 2) // ćwiartka 1
+                {
+                    alpha = Vector3.Angle((joints[i+1] - (O + joints[i])), plusXminusZ - O);
+                    beta = Vector3.Angle((plusXplusZ - plusXminusZ), (O - plusXminusZ));
+                    gamma = 180 - alpha - beta;
+                    a = Vector3.Magnitude(plusXminusZ - O) * Mathf.Sin(alpha * Mathf.Deg2Rad) / Mathf.Sin(gamma * Mathf.Deg2Rad);
 
-                constrainedJointNextPosition = (plusXplusZ - plusXminusZ).normalized * a + plusXminusZ + joints[i];
+                    constrainedJointNextPosition = (plusXplusZ - plusXminusZ).normalized * a + plusXminusZ + joints[i];
 
-                Debug.DrawRay(O + joints[i], ((plusXplusZ + plusXminusZ) / 2 - O).normalized * 100, Color.yellow, debug_RayDuration);
-                DrawStarAtPoint(constrainedJointNextPosition, Color.yellow);
-                DrawStarAtPoint(plusXminusZ + joints[i], Color.yellow);
-            }
-            else if (Vector3.Angle(OXD, (plusXplusZ + plusXminusZ) / 2 - O) > 180 - (theta / 2)) // ćwiartka 3
-            {
-                alpha = Vector3.Angle((joints[i + 1] - (O + joints[i])), minusXplusZ - O);
-                beta = Vector3.Angle((minusXminusZ - minusXplusZ), (O - minusXplusZ));
-                gamma = 180 - alpha - beta;
-                a = Vector3.Magnitude(minusXplusZ - O) * Mathf.Sin(alpha * Mathf.Deg2Rad) / Mathf.Sin(gamma * Mathf.Deg2Rad);
+                    Debug.DrawRay(O + joints[i], ((plusXplusZ + plusXminusZ) / 2 - O).normalized * 100, Color.yellow, debug_RayDuration);
+                    DrawStarAtPoint(constrainedJointNextPosition, Color.yellow);
+                    DrawStarAtPoint(plusXminusZ + joints[i], Color.yellow);
+                }
+                else if (Vector3.Angle(OXD, (plusXplusZ + plusXminusZ) / 2 - O) > 180 - (theta / 2)) // ćwiartka 3
+                {
+                    alpha = Vector3.Angle((joints[i + 1] - (O + joints[i])), minusXplusZ - O);
+                    beta = Vector3.Angle((minusXminusZ - minusXplusZ), (O - minusXplusZ));
+                    gamma = 180 - alpha - beta;
+                    a = Vector3.Magnitude(minusXplusZ - O) * Mathf.Sin(alpha * Mathf.Deg2Rad) / Mathf.Sin(gamma * Mathf.Deg2Rad);
 
-                constrainedJointNextPosition = (minusXminusZ - minusXplusZ).normalized * a + minusXplusZ + joints[i];
+                    constrainedJointNextPosition = (minusXminusZ - minusXplusZ).normalized * a + minusXplusZ + joints[i];
 
-                Debug.DrawRay(O + joints[i], ((plusXplusZ + plusXminusZ) / 2 - O).normalized * -100, Color.green, debug_RayDuration);
-                DrawStarAtPoint(constrainedJointNextPosition, Color.green);
-                DrawStarAtPoint(minusXplusZ + joints[i], Color.green);
-            }
-            else if (Vector3.Angle(OXD, (plusXplusZ + minusXplusZ) / 2 - O) < (180 - theta) / 2) // ćwiartka 4
-            {
-                alpha = Vector3.Angle((joints[i + 1] - (O + joints[i])), plusXplusZ - O);
-                beta = Vector3.Angle((minusXplusZ - plusXplusZ), (O - plusXplusZ));
-                gamma = 180 - alpha - beta;
-                a = Vector3.Magnitude(plusXplusZ - O) * Mathf.Sin(alpha * Mathf.Deg2Rad) / Mathf.Sin(gamma * Mathf.Deg2Rad);
+                    Debug.DrawRay(O + joints[i], ((plusXplusZ + plusXminusZ) / 2 - O).normalized * -100, Color.green, debug_RayDuration);
+                    DrawStarAtPoint(constrainedJointNextPosition, Color.green);
+                    DrawStarAtPoint(minusXplusZ + joints[i], Color.green);
+                }
+                else if (Vector3.Angle(OXD, (plusXplusZ + minusXplusZ) / 2 - O) < (180 - theta) / 2) // ćwiartka 4
+                {
+                    alpha = Vector3.Angle((joints[i + 1] - (O + joints[i])), plusXplusZ - O);
+                    beta = Vector3.Angle((minusXplusZ - plusXplusZ), (O - plusXplusZ));
+                    gamma = 180 - alpha - beta;
+                    a = Vector3.Magnitude(plusXplusZ - O) * Mathf.Sin(alpha * Mathf.Deg2Rad) / Mathf.Sin(gamma * Mathf.Deg2Rad);
 
-                constrainedJointNextPosition = (minusXplusZ - plusXplusZ).normalized * a + plusXplusZ + joints[i];
+                    constrainedJointNextPosition = (minusXplusZ - plusXplusZ).normalized * a + plusXplusZ + joints[i];
 
-                Debug.DrawRay(O + joints[i], ((plusXplusZ + minusXplusZ) / 2 - O).normalized * 100, Color.red, debug_RayDuration);
-                DrawStarAtPoint(constrainedJointNextPosition, Color.red);
-                DrawStarAtPoint(plusXplusZ + joints[i], Color.red);
-            }
-            else // ćwiartka 2
-            {
-                alpha = Vector3.Angle((joints[i + 1] - (O + joints[i])), minusXminusZ - O);
-                beta = Vector3.Angle((plusXminusZ - minusXminusZ), (O - minusXminusZ));
-                gamma = 180 - alpha - beta;
-                a = Vector3.Magnitude(minusXminusZ - O) * Mathf.Sin(alpha * Mathf.Deg2Rad) / Mathf.Sin(gamma * Mathf.Deg2Rad);
+                    Debug.DrawRay(O + joints[i], ((plusXplusZ + minusXplusZ) / 2 - O).normalized * 100, Color.red, debug_RayDuration);
+                    DrawStarAtPoint(constrainedJointNextPosition, Color.red);
+                    DrawStarAtPoint(plusXplusZ + joints[i], Color.red);
+                }
+                else // ćwiartka 2
+                {
+                    alpha = Vector3.Angle((joints[i + 1] - (O + joints[i])), minusXminusZ - O);
+                    beta = Vector3.Angle((plusXminusZ - minusXminusZ), (O - minusXminusZ));
+                    gamma = 180 - alpha - beta;
+                    a = Vector3.Magnitude(minusXminusZ - O) * Mathf.Sin(alpha * Mathf.Deg2Rad) / Mathf.Sin(gamma * Mathf.Deg2Rad);
 
-                constrainedJointNextPosition = (plusXminusZ - minusXminusZ).normalized * a + minusXminusZ + joints[i];
+                    constrainedJointNextPosition = (plusXminusZ - minusXminusZ).normalized * a + minusXminusZ + joints[i];
 
-                Debug.DrawRay(O + joints[i], ((minusXminusZ + plusXminusZ) / 2 - O).normalized * 100, Color.magenta, debug_RayDuration);
-                DrawStarAtPoint(constrainedJointNextPosition, Color.magenta);
-                DrawStarAtPoint(minusXminusZ + joints[i], Color.magenta);
-            }
+                    Debug.DrawRay(O + joints[i], ((minusXminusZ + plusXminusZ) / 2 - O).normalized * 100, Color.magenta, debug_RayDuration);
+                    DrawStarAtPoint(constrainedJointNextPosition, Color.magenta);
+                    DrawStarAtPoint(minusXminusZ + joints[i], Color.magenta);
+                }
 
-            #endregion
+                #endregion
 
-            #region 2.6 Correct next joint position according to constrains
+                #region 2.6 Correct next joint position according to constrains
             
-            if (isOBelowJoint)
-            {
-                Vector3 T = (constrainedJointNextPosition - joints[i]).normalized * _moduleLengths[i];
-                float L = Vector3.Dot(T, (joints[i - 1] - joints[i]).normalized);
+                if (isOBelowJoint)
+                {
+                    Vector3 T = (constrainedJointNextPosition - joints[i]).normalized * _moduleLengths[i];
+                    float L = Vector3.Dot(T, (joints[i - 1] - joints[i]).normalized);
 
-                Vector3 M = (joints[i - 1] - joints[i]).normalized * L;
-                Vector3 Mprime = (joints[i] - joints[i-1]).normalized * L;
-                Vector3 Tprime = T - M + Mprime;
+                    Vector3 M = (joints[i - 1] - joints[i]).normalized * L;
+                    Vector3 Mprime = (joints[i] - joints[i-1]).normalized * L;
+                    Vector3 Tprime = T - M + Mprime;
 
-                DrawStarAtPoint(joints[i], Color.red);
-                DrawStarAtPoint(T + joints[i], Color.red);
-                DrawStarAtPoint(M + joints[i], Color.green);
+                    DrawStarAtPoint(joints[i], Color.red);
+                    DrawStarAtPoint(T + joints[i], Color.red);
+                    DrawStarAtPoint(M + joints[i], Color.green);
 
-                Debug.DrawLine(joints[i],
-                          M + joints[i],
-                          Color.green,
-                          debug_RayDuration, false);
+                    Debug.DrawLine(joints[i],
+                              M + joints[i],
+                              Color.green,
+                              debug_RayDuration, false);
 
-                DrawStarAtPoint(Mprime + joints[i], Color.yellow);
-                DrawStarAtPoint(Tprime + joints[i], Color.magenta);
+                    DrawStarAtPoint(Mprime + joints[i], Color.yellow);
+                    DrawStarAtPoint(Tprime + joints[i], Color.magenta);
 
-                joints[i + 1] = joints[i] + Tprime;
-            }
-            else if (Vector3.Distance(joints[i+1], O + joints[i]) > Vector3.Distance(constrainedJointNextPosition, O + joints[i]))
-            {
-                joints[i + 1] = (constrainedJointNextPosition - joints[i]).normalized * _moduleLengths[i] + joints[i];
-            }
+                    joints[i + 1] = joints[i] + Tprime;
+                }
+                else if (Vector3.Distance(joints[i+1], O + joints[i]) > Vector3.Distance(constrainedJointNextPosition, O + joints[i]))
+                {
+                    joints[i + 1] = (constrainedJointNextPosition - joints[i]).normalized * _moduleLengths[i] + joints[i];
+                }
 
-            #endregion
+                #endregion
 
-            #region 2.7 End statements
+                #region 2.7 End statements
             
-            isOBelowJoint = false;
+                isOBelowJoint = false;
             
-            #endregion
+                #endregion
 
-            #region Debug: on
-            Debug.DrawRay(O+joints[i], (joints[i + 1] - (O + joints[i])).normalized * 100, Color.magenta, debug_RayDuration, false);
+                #region Debug: on
+                Debug.DrawRay(O+joints[i], (joints[i + 1] - (O + joints[i])).normalized * 100, Color.magenta, debug_RayDuration, false);
 
-            //DrawStarAtPoint(XD + joints[i], Color.green);
-            //DrawStarAtPoint(O + joints[i], Color.blue);
-            //DrawStarAtPoint(plusXplusZ + joints[i], Color.red);
-            //DrawStarAtPoint(plusXminusZ + joints[i], Color.magenta);
-            //DrawStarAtPoint((joints[i+1] - (XD + joints[i])).normalized * (float)a + XD + joints[i], Color.yellow);
-            //DrawStarAtPoint((plusXplusZ - plusXminusZ).normalized * a + plusXminusZ + joints[i], Color.yellow);
-            //DrawStarAtPoint((joints[i + 1] - O - joints[i]).normalized * b + O + joints[i], Color.yellow);
+                //DrawStarAtPoint(XD + joints[i], Color.green);
+                //DrawStarAtPoint(O + joints[i], Color.blue);
+                //DrawStarAtPoint(plusXplusZ + joints[i], Color.red);
+                //DrawStarAtPoint(plusXminusZ + joints[i], Color.magenta);
+                //DrawStarAtPoint((joints[i+1] - (XD + joints[i])).normalized * (float)a + XD + joints[i], Color.yellow);
+                //DrawStarAtPoint((plusXplusZ - plusXminusZ).normalized * a + plusXminusZ + joints[i], Color.yellow);
+                //DrawStarAtPoint((joints[i + 1] - O - joints[i]).normalized * b + O + joints[i], Color.yellow);
 
-            Debug.DrawLine(plusXplusZ + joints[i],
-                           plusXminusZ + joints[i],
-                           Color.cyan,
-                           debug_RayDuration, false);
-            Debug.DrawLine(plusXplusZ + joints[i],
-                           minusXplusZ + joints[i],
-                           Color.cyan,
-                           debug_RayDuration, false);
-            Debug.DrawLine(minusXplusZ + joints[i],
-                           minusXminusZ + joints[i],
-                           Color.cyan,
-                           debug_RayDuration, false);
-            Debug.DrawLine(minusXminusZ + joints[i],
-                           plusXminusZ + joints[i],
-                           Color.cyan,
-                           debug_RayDuration, false);
+                Debug.DrawLine(plusXplusZ + joints[i],
+                               plusXminusZ + joints[i],
+                               Color.cyan,
+                               debug_RayDuration, false);
+                Debug.DrawLine(plusXplusZ + joints[i],
+                               minusXplusZ + joints[i],
+                               Color.cyan,
+                               debug_RayDuration, false);
+                Debug.DrawLine(minusXplusZ + joints[i],
+                               minusXminusZ + joints[i],
+                               Color.cyan,
+                               debug_RayDuration, false);
+                Debug.DrawLine(minusXminusZ + joints[i],
+                               plusXminusZ + joints[i],
+                               Color.cyan,
+                               debug_RayDuration, false);
 
-            Debug.DrawLine(plusXminusZ + joints[i],
-                           O + joints[i],
-                           Color.cyan,
-                           debug_RayDuration, false);
-            Debug.DrawLine(plusXplusZ + joints[i],
-                           O + joints[i],
-                           Color.cyan,
-                           debug_RayDuration, false);
-            Debug.DrawLine(minusXplusZ + joints[i],
-                           O + joints[i],
-                           Color.cyan,
-                           debug_RayDuration, false);
-            Debug.DrawLine(minusXminusZ + joints[i],
-                           O + joints[i],
-                           Color.cyan,
-                           debug_RayDuration, false);
+                Debug.DrawLine(plusXminusZ + joints[i],
+                               O + joints[i],
+                               Color.cyan,
+                               debug_RayDuration, false);
+                Debug.DrawLine(plusXplusZ + joints[i],
+                               O + joints[i],
+                               Color.cyan,
+                               debug_RayDuration, false);
+                Debug.DrawLine(minusXplusZ + joints[i],
+                               O + joints[i],
+                               Color.cyan,
+                               debug_RayDuration, false);
+                Debug.DrawLine(minusXminusZ + joints[i],
+                               O + joints[i],
+                               Color.cyan,
+                               debug_RayDuration, false);
 
-            Debug.DrawLine(plusXminusZ + joints[i],
-                           joints[i],
-                           Color.cyan,
-                           debug_RayDuration, false);
-            Debug.DrawLine(plusXplusZ + joints[i],
-                           joints[i],
-                           Color.cyan,
-                           debug_RayDuration, false);
-            Debug.DrawLine(minusXplusZ + joints[i],
-                           joints[i],
-                           Color.cyan,
-                           debug_RayDuration, false);
-            Debug.DrawLine(minusXminusZ + joints[i],
-                           joints[i],
-                           Color.cyan,
-                           debug_RayDuration, false);
-            #endregion
+                Debug.DrawLine(plusXminusZ + joints[i],
+                               joints[i],
+                               Color.cyan,
+                               debug_RayDuration, false);
+                Debug.DrawLine(plusXplusZ + joints[i],
+                               joints[i],
+                               Color.cyan,
+                               debug_RayDuration, false);
+                Debug.DrawLine(minusXplusZ + joints[i],
+                               joints[i],
+                               Color.cyan,
+                               debug_RayDuration, false);
+                Debug.DrawLine(minusXminusZ + joints[i],
+                               joints[i],
+                               Color.cyan,
+                               debug_RayDuration, false);
+                #endregion
             }
 
 
         }
 
-        DrawStarAtPoint(joints[0], Color.magenta, 10);
-        for (int j = 0; j < joints.Count - 1; j++)
-        {
-            Debug.DrawLine(joints[j], joints[j + 1], Color.red, 10);
-            DrawStarAtPoint(joints[j + 1], Color.magenta, 10);
-        }
+        //DrawStarAtPoint(joints[0], Color.magenta, 10);
+        //for (int j = 0; j < joints.Count - 1; j++)
+        //{
+        //    Debug.DrawLine(joints[j], joints[j + 1], Color.red, 10);
+        //    DrawStarAtPoint(joints[j + 1], Color.magenta, 10);
+        //}
     }
 
     // After constrained positions are decided, I phisically rotate the joints to express the way in which kinematich chain with all its parts looks like 
