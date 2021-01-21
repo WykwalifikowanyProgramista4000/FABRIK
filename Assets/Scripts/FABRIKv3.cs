@@ -12,12 +12,17 @@ public class FABRIKv3 : MonoBehaviour
     public GameObject m_TargetPoint;
     public GameObject m_Base;
     public List<GameObject> m_Joints;
+    public GameObject m_RestPoint;
 
     [Header("--- Settings ---")]
-    public Quaternion _fromBaseDirection;
-    public bool _constraintsOn = false;
+    public Vector3 _fromBaseDirection;
     public int m_MaxFABRIKIterations = 20;
     public float m_DistanceFromTargetTolerance = 0.1f;
+    public float rotationSpeed = 1f;
+
+    public bool _keepAtRest = false;
+    public bool _constraintsOn = false;
+    public bool _limp = true;
 
     [Header("# DEBGUG #")]
     public GameObject debug_TestPoint;
@@ -27,12 +32,17 @@ public class FABRIKv3 : MonoBehaviour
     public bool on = false;
     private bool _forwardsFlag = false;
 
-
     public void SetupFabrik(List<GameObject> joints, GameObject baseObject, GameObject targetPoint)
+    {
+        SetupFabrik(joints, baseObject, targetPoint, targetPoint);
+    }
+
+    public void SetupFabrik(List<GameObject> joints, GameObject baseObject, GameObject targetPoint, GameObject restPoint)
     {
         m_Joints = joints;
         m_Base = baseObject;
         m_TargetPoint = targetPoint;
+        m_RestPoint = restPoint;
 
         _moduleLengths = new float[m_Joints.Count - 1];
 
@@ -42,7 +52,7 @@ public class FABRIKv3 : MonoBehaviour
                                                  m_Joints[i + 1].GetComponent<Transform>().position);
         }
 
-        _fromBaseDirection = Quaternion.FromToRotation(Vector3.up, (m_Joints[1].transform.position - m_Joints[0].transform.position).normalized);
+        _fromBaseDirection = (m_Joints[1].transform.position - m_Joints[0].transform.position).normalized;
     }
 
     void Start()
@@ -112,9 +122,25 @@ public class FABRIKv3 : MonoBehaviour
 
     public void Forwards()
     {
-        if (Vector3.Distance(m_TargetPoint.transform.position, m_Joints[m_Joints.Count -1].transform.position) <= m_DistanceFromTargetTolerance) { return; }
+        Vector3 origin = new Vector3();
 
-        Vector3 origin = m_TargetPoint.transform.position;
+        if (_limp)
+        {
+            return;
+        }
+        else if (_keepAtRest)
+        {
+            origin = m_RestPoint.transform.position;
+        }
+        else
+        {
+            
+            origin = m_TargetPoint.transform.position;
+        }
+
+        if (Vector3.Distance(origin, m_Joints[m_Joints.Count - 1].transform.position) <= m_DistanceFromTargetTolerance) { return; }
+
+
         List<Vector3> joints = new List<Vector3>();
         joints.AddRange(m_Joints.Select(x => x.transform.position));
 
@@ -128,12 +154,22 @@ public class FABRIKv3 : MonoBehaviour
     public void Backwards()
     {
         Vector3 origin = m_Base.transform.position;
+
+        if (Vector3.Distance(origin, m_Joints[m_Joints.Count - 1].transform.position) <= m_DistanceFromTargetTolerance) { return; }
+
         List<Vector3> joints = new List<Vector3>();
         joints.AddRange(m_Joints.Select(x => x.transform.position));
 
         Fabrik(joints, origin, true);
         RotateJoints(joints);
         m_Joints[0].transform.position = m_Base.transform.position;
+    }
+
+    private void KeepAtBase()
+    {
+        m_Joints[0].transform.position = m_Base.transform.position;
+        m_Joints[0].transform.rotation = m_Base.transform.rotation;
+        m_Joints[0].transform.rotation *= Quaternion.FromToRotation((m_Joints[1].transform.position - m_Joints[0].transform.position).normalized, _fromBaseDirection);
     }
 
     public void Fabrik(List<Vector3> joints, Vector3 origin, bool backwards = false)    // TODO: need to add constrains here! With them, I can locate new global position for the joint
@@ -161,25 +197,7 @@ public class FABRIKv3 : MonoBehaviour
 
         for (int i = 0; i < joints.Count - 1; i++)
         {
-            if (i > 0)
-            {
-                #region DEBUG: off : casting the line along the arm
-                direction = (joints[i] - joints[i - 1]).normalized;
 
-                // Linia wzdłóż lokalnej osi Y
-                //Debug.DrawRay(joints[i], direction.normalized * 100, Color.red, debug_RayDuration, false);
-                //Debug.DrawRay(joints[i], direction.normalized * -100, Color.red, debug_RayDuration, false);
-                #endregion
-            }
-            else
-            {
-                #region DEBUG: off : casting the line along the arm
-                direction = (_fromBaseDirection * m_Base.transform.rotation * Vector3.up).normalized;
-                // Linia wzdłóż lokalnej osi Y
-                //Debug.DrawRay(joints[0], direction.normalized * 100, Color.red, debug_RayDuration, false);
-                //Debug.DrawRay(joints[0], direction.normalized * -100, Color.red, debug_RayDuration, false);
-                #endregion
-            }
 
             #region 1. Find new unconstraind position for i+1 joint
             joints[i + 1] = joints[i] + (joints[i + 1] - joints[i]).normalized * _moduleLengths[i];
@@ -187,6 +205,29 @@ public class FABRIKv3 : MonoBehaviour
 
             if (_constraintsOn && backwards)
             {
+                #region 2.1 normalized direction
+                if (i > 0)
+                {
+                    #region DEBUG: off : casting the line along the arm
+                    direction = (joints[i] - joints[i - 1]).normalized;
+
+                    // Linia wzdłóż lokalnej osi Y
+                    //Debug.DrawRay(joints[i], direction.normalized * 100, Color.red, debug_RayDuration, false);
+                    //Debug.DrawRay(joints[i], direction.normalized * -100, Color.red, debug_RayDuration, false);
+                    #endregion
+                }
+                else
+                {
+                    #region DEBUG: off : casting the line along the arm
+                    direction = (/*_fromBaseDirection **/ m_Base.transform.rotation * _fromBaseDirection).normalized;
+                    // Linia wzdłóż lokalnej osi Y
+
+                    Debug.DrawRay(joints[0], direction.normalized * 100, Color.red, debug_RayDuration, false);
+                    //Debug.DrawRay(joints[0], direction.normalized * -100, Color.red, debug_RayDuration, false);
+                    #endregion
+                }
+                #endregion
+
                 #region 2.2 Cast a line L from i joint that goes through i and i-1 joint and find the point O on the newly created line at the intersection with the perpendicular line cast to L
                 linePointToPoint = (joints[i + 1] - joints[i]); //get vector from point on line to point in space
                 t = Vector3.Dot(linePointToPoint, direction);
@@ -244,9 +285,10 @@ public class FABRIKv3 : MonoBehaviour
                 {
                     isOBelowJoint = true;
                 }
-                else if(i == 0)
+                else if (i == 0 && Vector3.Angle((joints[i] - joints[i+1]).normalized, direction * -1) < 90)
                 {
-
+                    isOBelowJoint = true;
+                    Debug.Log("shit happend now  " + i + "  hey  " + Vector3.Angle((joints[i] - joints[i+1]).normalized, direction * -1));
                 }
 
                 #endregion
@@ -262,13 +304,13 @@ public class FABRIKv3 : MonoBehaviour
                 Vector3 OXD = joints[i + 1] - O - joints[i];
                 Vector3 constrainedJointNextPosition = new Vector3();
             
-                if (i == joints.Count - 2)
-                {
-                    Debug.Log("plusXplusZ: " + Vector3.Angle(OXD, plusXplusZ - O) + "   minusXminusZ: " + Vector3.Angle(OXD, minusXminusZ - O) +
-                        "   plusXminusZ: " + Vector3.Angle(OXD, plusXminusZ - O) + "   minusXplusZ: " + Vector3.Angle(OXD, minusXplusZ - O) +
-                        "   angle: " + Vector3.Angle(OXD, (plusXplusZ - plusXminusZ) / 2) + "   theta: " + theta +
-                        "   isOBelowJoint: " + isOBelowJoint);
-                }
+                //if (i == joints.Count - 2)
+                //{
+                //    Debug.Log("plusXplusZ: " + Vector3.Angle(OXD, plusXplusZ - O) + "   minusXminusZ: " + Vector3.Angle(OXD, minusXminusZ - O) +
+                //        "   plusXminusZ: " + Vector3.Angle(OXD, plusXminusZ - O) + "   minusXplusZ: " + Vector3.Angle(OXD, minusXplusZ - O) +
+                //        "   angle: " + Vector3.Angle(OXD, (plusXplusZ - plusXminusZ) / 2) + "   theta: " + theta +
+                //        "   isOBelowJoint: " + isOBelowJoint);
+                //}
 
                 if (Vector3.Angle(OXD, (plusXplusZ + plusXminusZ) / 2 - O) < theta / 2) // ćwiartka 1
                 {
@@ -327,7 +369,7 @@ public class FABRIKv3 : MonoBehaviour
 
                 #region 2.6 Correct next joint position according to constrains
             
-                if (isOBelowJoint)
+                if (isOBelowJoint && i > 0)
                 {
                     Vector3 T = (constrainedJointNextPosition - joints[i]).normalized * _moduleLengths[i];
                     float L = Vector3.Dot(T, (joints[i - 1] - joints[i]).normalized);
@@ -350,6 +392,29 @@ public class FABRIKv3 : MonoBehaviour
 
                     joints[i + 1] = joints[i] + Tprime;
                 }
+                //else if (isOBelowJoint && i == 0)
+                //{
+                //    Vector3 T = (constrainedJointNextPosition - joints[i]).normalized * _moduleLengths[i];
+                //    float L = Vector3.Dot(T, (direction * -1).normalized);
+
+                //    Vector3 M = (direction * -1).normalized * L;
+                //    Vector3 Mprime = (direction).normalized * L;
+                //    Vector3 Tprime = T - M + Mprime;
+
+                //    DrawStarAtPoint(joints[i], Color.red);
+                //    DrawStarAtPoint(T + joints[i], Color.red);
+                //    DrawStarAtPoint(M + joints[i], Color.green);
+
+                //    Debug.DrawLine(joints[i],
+                //              M + joints[i],
+                //              Color.green,
+                //              debug_RayDuration, false);
+
+                //    DrawStarAtPoint(Mprime + joints[i], Color.yellow);
+                //    DrawStarAtPoint(Tprime + joints[i], Color.magenta);
+
+                //    joints[i + 1] = joints[i] + Tprime;
+                //}
                 else if (Vector3.Distance(joints[i+1], O + joints[i]) > Vector3.Distance(constrainedJointNextPosition, O + joints[i]))
                 {
                     joints[i + 1] = (constrainedJointNextPosition - joints[i]).normalized * _moduleLengths[i] + joints[i];
@@ -445,7 +510,19 @@ public class FABRIKv3 : MonoBehaviour
         //Quaternion angles;
         for (int i = 0; i < joints.Count - 1; i++)  // obtaining the needed rotationWebexowi ns for the fount joint positions
         {
-            m_Joints[i].GetComponent<Transform>().rotation = Quaternion.LookRotation((joints[i + 1] - joints[i]).normalized) * Quaternion.AngleAxis(90, new Vector3(1, 0, 0));
+            // Can be done for sure in a diffrent way
+            Quaternion targetRotation = Quaternion.LookRotation((joints[i + 1] - joints[i]).normalized) * Quaternion.AngleAxis(90, new Vector3(1, 0, 0));
+
+            m_Joints[i].transform.rotation = Quaternion.Slerp(m_Joints[i].transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
+            //if (i > 0)
+            //{
+            //    m_Joints[i].transform.rotation = Quaternion.FromToRotation((joints[i] - joints[i - 1]).normalized, (joints[i + 1] - joints[i]).normalized);
+            //}
+            ////else if (i == 0)
+            ////{
+            ////    Vector3 direction = (/*_fromBaseDirection **/ m_Base.transform.rotation * _fromBaseDirection).normalized;
+            ////    m_Joints[i].transform.rotation = Quaternion.FromToRotation((direction).normalized, (joints[i + 1] - joints[i]).normalized);
+            ////}
         }
 
         #region DEBUG: off
