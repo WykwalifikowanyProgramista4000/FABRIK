@@ -35,7 +35,7 @@ public class RobotJoint : MonoBehaviour
     public float minAngle;
     public float maxAngle;
 
-    void Start()
+    void Awake()
     {
         StartOffset = transform.localPosition;
     }

@@ -56,7 +56,6 @@ public class HumanBody : MonoBehaviour
     [SerializeField] private bool _lowerChainConstraints = false;
     private FABRIKv3 _lowerChainFabrik = new FABRIKv3();
 
-
     [Header("--- Left Leg ---")]
     [SerializeField] private List<GameObject> m_leftLeg = new List<GameObject>();
     [SerializeField] private GameObject m_leftLegRestPoint;
@@ -64,6 +63,7 @@ public class HumanBody : MonoBehaviour
     [SerializeField] private bool _leftLegRest = false;
     [SerializeField] private bool _leftLegConstraints = false;
     private FABRIKv3 _leftLegFabrik = new FABRIKv3();
+    private Vector3 _leftLegWalkTarget;
 
     [Header("--- Right Leg ---")]
     [SerializeField] private List<GameObject> m_rightLeg = new List<GameObject>();
@@ -72,6 +72,7 @@ public class HumanBody : MonoBehaviour
     [SerializeField] private bool _rightLegRest = false;
     [SerializeField] private bool _rightLegConstraints = false;
     private FABRIKv3 _rightLegFabrik = new FABRIKv3();
+    private Vector3 _rightLegWalkTarget;
 
     [Header("~~~~ DEBUG ~~~~")]
     [SerializeField] private bool _doFabrikForwardsOnce = false;
@@ -85,7 +86,13 @@ public class HumanBody : MonoBehaviour
 
     [Header("~~~~ Modes ~~~~")]
     [SerializeField] private bool _fivePointStreched = false;
+    [SerializeField] private bool _readyForWalkTakieTe = false;
+    [SerializeField] private bool _sillyLittleTest = false;
+    private bool _didFwrd = false;
 
+    [Header("~~~~ Walk Settings ~~~~")]
+    [SerializeField] private float _walkingSpeed = 0.3f;
+    [SerializeField] private float _stepTargetTolerance = 0.1f;
 
 
     private void Start()
@@ -131,6 +138,8 @@ public class HumanBody : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+
+        #region Fabrik Settings
         _headFabrik._constraintsOn = _headConstraints;
         _leftArmFabrik._constraintsOn = _leftArmConstraints;
         _rightArmFabrik._constraintsOn = _rightArmConstraints;
@@ -158,6 +167,7 @@ public class HumanBody : MonoBehaviour
         _headFabrik._keepAtRest = _headRest;
         _leftLegFabrik._keepAtRest = _leftLegRest;
         _rightLegFabrik._keepAtRest = _rightLegRest;
+        #endregion
 
         if (_fivePointStreched)
         {
@@ -175,7 +185,9 @@ public class HumanBody : MonoBehaviour
             _upperChainFabrik.Forwards();
             _lowerChainFabrik.Forwards();
 
-            DetermineSubbasePosition(m_BodyBase, new List<GameObject>() { m_upperChain[0], m_lowerChain[0] });
+            //Debug.Break();
+
+            //DetermineSubbasePosition(m_BodyBase, new List<GameObject>() { m_upperChain[0], m_lowerChain[0] });
 
             _upperChainFabrik.Backwards();
             _lowerChainFabrik.Backwards();
@@ -192,21 +204,66 @@ public class HumanBody : MonoBehaviour
             _rightLegFabrik.Backwards();
         }
 
-
-
-        if (_doFabrikForwardsOnce || _doFabrikForwardsContinously)
+        if (_readyForWalkTakieTe)
         {
-            
+            _headFabrik.Forwards();
+            _leftArmFabrik.Forwards();
+            _rightArmFabrik.Forwards();
+            _leftLegFabrik.Forwards();
+            _rightLegFabrik.Forwards();
 
-            _doFabrikForwardsOnce = false;
+            _headFabrik.Backwards();
+            _leftArmFabrik.Backwards();
+            _rightArmFabrik.Backwards();
+            _leftLegFabrik.Backwards();
+            _rightLegFabrik.Backwards();
         }
 
-        if (_doFabrikBackwardsOnce || _doFabrikBackwardsContinously)
+        if (Input.GetKey(KeyCode.W))
         {
-           
+            m_BodyBase.transform.Translate(_walkingSpeed *  Vector3.right * Time.deltaTime);
+            WalkAnimation();
+        }
 
+        if (_sillyLittleTest)
+        {
+            if (_didFwrd)
+            {
+                _headFabrik.Forwards();
 
-            _doFabrikBackwardsOnce = false;
+                _leftArmFabrik.Forwards();
+                _rightArmFabrik.Forwards();
+
+                _leftLegFabrik.Forwards();
+                _rightLegFabrik.Forwards();
+
+                DetermineSubbasePosition(m_lowerChainSubbase, new List<GameObject>() { m_leftLeg[0], m_rightLeg[0] });
+                DetermineSubbasePosition(m_upperChainSubbase, new List<GameObject>() { m_leftArm[0], m_rightArm[0], m_Head[0] });
+
+                _upperChainFabrik.Forwards();
+                _lowerChainFabrik.Forwards();
+
+                DetermineSubbasePosition(m_BodyBase, new List<GameObject>() { m_upperChain[0], m_lowerChain[0] });
+            }
+            else
+            {
+                _upperChainFabrik.Backwards();
+                _lowerChainFabrik.Backwards();
+
+                m_upperChainSubbase.transform.position = m_upperChain[m_upperChain.Count - 1].transform.position;
+                m_lowerChainSubbase.transform.position = m_lowerChain[m_lowerChain.Count - 1].transform.position;
+
+                _headFabrik.Backwards();
+
+                _leftArmFabrik.Backwards();
+                _rightArmFabrik.Backwards();
+
+                _leftLegFabrik.Backwards();
+                _rightLegFabrik.Backwards();
+            }
+
+            Debug.Break();
+            _didFwrd = !_didFwrd;
         }
     }
 
@@ -225,5 +282,66 @@ public class HumanBody : MonoBehaviour
         normals = normals / chainBases.Count;
 
         subbase.transform.position = Vector3.Lerp(subbase.transform.position, normals * magnitudes, subbaseMoveSpeed * Time.deltaTime);
+        //subbase.transform.position = normals * magnitudes;
+    }
+
+    bool _rightLegMoving = false;
+    bool _leftLegMoving = false;
+
+    void WalkAnimation()
+    {
+        if(!_rightLegMoving && !_leftLegMoving)
+        {
+            RaycastHit hitInfo;
+            Physics.Raycast(m_rightLeg[0].transform.position, (m_rightLegRestPoint.transform.position + Vector3.right * _walkingSpeed) - m_rightLeg[0].transform.position, out hitInfo, 100f, 1 << 8);
+            Debug.DrawRay(m_rightLeg[0].transform.position, (m_rightLegRestPoint.transform.position + Vector3.right * _walkingSpeed) - m_rightLeg[0].transform.position, Color.red, 0.3f);
+
+            _rightLegWalkTarget = hitInfo.point;
+
+            _rightLegMoving = true;
+            _leftLegMoving = false;
+
+            m_RightLegTarget.transform.position = Vector3.Lerp(_rightLegWalkTarget, m_rightLeg[m_rightLeg.Count - 1].transform.position, _walkingSpeed * Time.deltaTime);
+        }
+        else if (_rightLegMoving && !_leftLegMoving)
+        {
+            if (Vector3.Distance(m_rightLeg[m_rightLeg.Count - 1].transform.position, m_RightLegTarget.transform.position) <= _stepTargetTolerance)
+            {
+                RaycastHit hitInfo;
+                Physics.Raycast(m_leftLeg[0].transform.position, (m_leftLegRestPoint.transform.position + Vector3.right * _walkingSpeed) - m_leftLeg[0].transform.position, out hitInfo, 100f, 1 << 8);
+                Debug.DrawRay(m_leftLeg[0].transform.position, (m_leftLegRestPoint.transform.position + Vector3.right * _walkingSpeed) - m_leftLeg[0].transform.position, Color.green, 0.3f);
+
+                _leftLegWalkTarget = hitInfo.point;
+
+                _leftLegMoving = true;
+                _rightLegMoving = false;
+            }
+            else
+            {
+                m_RightLegTarget.transform.position = Vector3.Slerp(m_rightLeg[m_rightLeg.Count - 1].transform.position, _rightLegWalkTarget, 1 / (_walkingSpeed * 1000));
+            }
+        }
+        else if (!_rightLegMoving && _leftLegMoving)
+        {
+            if (Vector3.Distance(m_leftLeg[m_leftLeg.Count - 1].transform.position, m_LeftLegTarget.transform.position) <= _stepTargetTolerance)
+            {
+                RaycastHit hitInfo;
+                Physics.Raycast(m_rightLeg[0].transform.position, (m_rightLegRestPoint.transform.position + Vector3.right * _walkingSpeed) - m_rightLeg[0].transform.position, out hitInfo, 100f, 1 << 8);
+                Debug.DrawRay(m_rightLeg[0].transform.position, (m_rightLegRestPoint.transform.position + Vector3.right * _walkingSpeed) - m_rightLeg[0].transform.position, Color.red, 0.3f);
+
+                _rightLegWalkTarget = hitInfo.point;
+
+                _rightLegMoving = true;
+                _leftLegMoving = false;
+            }
+            else
+            {
+                m_LeftLegTarget.transform.position = Vector3.Slerp(m_leftLeg[m_leftLeg.Count - 1].transform.position, _leftLegWalkTarget, 1 / (_walkingSpeed * 1000));
+            }
+
+        }
+
+
+        //Debug.DrawLine(m_rightLeg[0].transform.position, m_rightLegRestPoint.transform.position + Vector3.right * _walkingSpeed * 10, Color.red, 0.3f);
     }
 }

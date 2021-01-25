@@ -6,7 +6,7 @@ using System.Threading;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-public class FABRIKv3 : MonoBehaviour
+public class FABRIKv3forinz : MonoBehaviour
 {
     [Header("--- Components ---")]
     public GameObject m_TargetPoint;
@@ -25,14 +25,11 @@ public class FABRIKv3 : MonoBehaviour
     public bool _limp = true;
 
     [Header("# DEBGUG #")]
-    public GameObject debug_TestPoint;
     private const float debug_RayDuration = 0.1f;
 
     [SerializeField] private bool _sillyLittleFabrik = false;
 
     public float[] _moduleLengths;
-    public bool on = false;
-    private bool _forwardsFlag = false;
 
     public void SetupFabrik(List<GameObject> joints, GameObject baseObject, GameObject targetPoint)
     {
@@ -59,7 +56,15 @@ public class FABRIKv3 : MonoBehaviour
 
     void Start()
     {
-        
+        _moduleLengths = new float[m_Joints.Count - 1];
+
+        for (int i = 0; i < m_Joints.Count - 1; i++)
+        {
+            _moduleLengths[i] = Vector3.Distance(m_Joints[i].GetComponent<Transform>().position,
+                                                 m_Joints[i + 1].GetComponent<Transform>().position);
+        }
+
+        _fromBaseDirection = (m_Joints[1].transform.position - m_Joints[0].transform.position).normalized;
     }
 
 
@@ -232,7 +237,7 @@ public class FABRIKv3 : MonoBehaviour
                     direction = (/*_fromBaseDirection **/ m_Base.transform.rotation * _fromBaseDirection).normalized;
                     // Linia wzdłóż lokalnej osi Y
 
-                    //Debug.DrawRay(joints[0], direction.normalized * 100, Color.red, debug_RayDuration, false);
+                    Debug.DrawRay(joints[0], direction.normalized * 100, Color.red, debug_RayDuration, false);
                     //Debug.DrawRay(joints[0], direction.normalized * -100, Color.red, debug_RayDuration, false);
                     #endregion
                 }
@@ -331,9 +336,9 @@ public class FABRIKv3 : MonoBehaviour
 
                     constrainedJointNextPosition = (plusXplusZ - plusXminusZ).normalized * a + plusXminusZ + joints[i];
 
-                    //Debug.DrawRay(O + joints[i], ((plusXplusZ + plusXminusZ) / 2 - O).normalized * 100, Color.yellow, debug_RayDuration);
-                    //DrawStarAtPoint(constrainedJointNextPosition, Color.yellow);
-                    //DrawStarAtPoint(plusXminusZ + joints[i], Color.yellow);
+                    Debug.DrawRay(O + joints[i], ((plusXplusZ + plusXminusZ) / 2 - O).normalized * 100, Color.yellow, debug_RayDuration);
+                    DrawStarAtPoint(constrainedJointNextPosition, Color.yellow);
+                    DrawStarAtPoint(plusXminusZ + joints[i], Color.yellow);
                 }
                 else if (Vector3.Angle(OXD, (plusXplusZ + plusXminusZ) / 2 - O) > 180 - (theta / 2)) // ćwiartka 3
                 {
@@ -344,9 +349,9 @@ public class FABRIKv3 : MonoBehaviour
 
                     constrainedJointNextPosition = (minusXminusZ - minusXplusZ).normalized * a + minusXplusZ + joints[i];
 
-                    //Debug.DrawRay(O + joints[i], ((plusXplusZ + plusXminusZ) / 2 - O).normalized * -100, Color.green, debug_RayDuration);
-                    //DrawStarAtPoint(constrainedJointNextPosition, Color.green);
-                    //DrawStarAtPoint(minusXplusZ + joints[i], Color.green);
+                    Debug.DrawRay(O + joints[i], ((plusXplusZ + plusXminusZ) / 2 - O).normalized * -100, Color.green, debug_RayDuration);
+                    DrawStarAtPoint(constrainedJointNextPosition, Color.green);
+                    DrawStarAtPoint(minusXplusZ + joints[i], Color.green);
                 }
                 else if (Vector3.Angle(OXD, (plusXplusZ + minusXplusZ) / 2 - O) < (180 - theta) / 2) // ćwiartka 4
                 {
@@ -358,8 +363,9 @@ public class FABRIKv3 : MonoBehaviour
                     constrainedJointNextPosition = (minusXplusZ - plusXplusZ).normalized * a + plusXplusZ + joints[i];
 
                     //Debug.DrawRay(O + joints[i], ((plusXplusZ + minusXplusZ) / 2 - O).normalized * 100, Color.red, debug_RayDuration);
-                    //DrawStarAtPoint(constrainedJointNextPosition, Color.red);
+                    DrawStarAtPoint(constrainedJointNextPosition, Color.red);
                     //DrawStarAtPoint(plusXplusZ + joints[i], Color.red);
+                    DrawStarAtPoint(O + joints[i], Color.green);
                 }
                 else // ćwiartka 2
                 {
@@ -370,9 +376,9 @@ public class FABRIKv3 : MonoBehaviour
 
                     constrainedJointNextPosition = (plusXminusZ - minusXminusZ).normalized * a + minusXminusZ + joints[i];
 
-                    //Debug.DrawRay(O + joints[i], ((minusXminusZ + plusXminusZ) / 2 - O).normalized * 100, Color.magenta, debug_RayDuration);
-                    //DrawStarAtPoint(constrainedJointNextPosition, Color.magenta);
-                    //DrawStarAtPoint(minusXminusZ + joints[i], Color.magenta);
+                    Debug.DrawRay(O + joints[i], ((minusXminusZ + plusXminusZ) / 2 - O).normalized * 100, Color.magenta, debug_RayDuration);
+                    DrawStarAtPoint(constrainedJointNextPosition, Color.magenta);
+                    DrawStarAtPoint(minusXminusZ + joints[i], Color.magenta);
                 }
 
                 #endregion
@@ -439,7 +445,8 @@ public class FABRIKv3 : MonoBehaviour
                 #endregion
 
                 #region Debug: on
-                //Debug.DrawRay(O+joints[i], (joints[i + 1] - (O + joints[i])).normalized * 100, Color.magenta, debug_RayDuration, false);
+                Debug.DrawRay(O+joints[i], (joints[i + 1] - (O + joints[i])).normalized * 100, Color.magenta, debug_RayDuration, false);
+
 
                 //DrawStarAtPoint(XD + joints[i], Color.green);
                 //DrawStarAtPoint(O + joints[i], Color.blue);
@@ -523,7 +530,8 @@ public class FABRIKv3 : MonoBehaviour
             // Can be done for sure in a diffrent way
             Quaternion targetRotation = Quaternion.LookRotation((joints[i + 1] - joints[i]).normalized) * Quaternion.AngleAxis(90, new Vector3(1, 0, 0));
 
-            m_Joints[i].transform.rotation = Quaternion.Slerp(m_Joints[i].transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
+            //m_Joints[i].transform.rotation = Quaternion.Slerp(m_Joints[i].transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
+            m_Joints[i].transform.rotation = targetRotation;
             //if (i > 0)
             //{
             //    m_Joints[i].transform.rotation = Quaternion.FromToRotation((joints[i] - joints[i - 1]).normalized, (joints[i + 1] - joints[i]).normalized);
